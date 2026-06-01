@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import BookingModal from "../../Components/User/Bookingmodal.jsx";
-import ServiceDetailPage from "../../Components/User/ServiceDetailPage.jsx"; // adjust path if needed
+import ServiceDetailPage from "../../Components/User/Servicedetailpage.jsx"; // adjust path if needed
 
 const API_BAS1 = import.meta.env.VITE_API_URL;
 
