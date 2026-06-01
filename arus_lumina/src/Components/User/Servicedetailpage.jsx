@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import BookingModal from "./BookingModal.jsx";
+import BookingModal from "./Bookingmodal.jsx";
 const API_BASE1 = import.meta.env.VITE_API_URL;
 
 const API_BASE = `${API_BASE1}/api`;
