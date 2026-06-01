@@ -3,7 +3,7 @@ const router  = express.Router();
 const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+const { protect, isAdmin } = require('../middleware/authMiddleware.js');
 const {
   addSubService,
   getAllSubServices,
@@ -11,7 +11,7 @@ const {
   getSubServiceById,
   updateSubService,
   deleteSubService,
-} = require('../Controllers/Subservicecontroller');
+} = require('../Controllers/Subservicecontroller.js');
 
 // ── Upload middleware (mirrors your existing subcategory upload) ──────────────
 const storage = multer.diskStorage({

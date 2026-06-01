@@ -1,14 +1,14 @@
 const express    = require('express');
 const router     = express.Router();
-const upload     = require('../middleware/uploadMiddleware');
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+const upload     = require('../middleware/uploadMiddleware.js');
+const { protect, isAdmin } = require('../middleware/authMiddleware.js');
 const {
   addCategory,
   getAllCategories,
   getCategoryById,
   updateCategory,
   deleteCategory
-} = require('../Controllers/categoryController');
+} = require('../Controllers/categoryController.js');
 
 // Public
 router.get('/',    getAllCategories);

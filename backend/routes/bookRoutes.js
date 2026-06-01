@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+const { protect, isAdmin } = require('../middleware/authMiddleware.js');
 const {
   createBooking,
   getAllBookings,
@@ -12,8 +12,8 @@ const {
   assignVendor,
   deleteBooking,
   getMyBookings ,
-} = require('../Controllers/BookController');
-const { protectVendor } = require('../middleware/vendorAuthMiddleware');
+} = require('../Controllers/BookController.js');
+const { protectVendor } = require('../middleware/Vendorauthmiddleware.js');
 
 
 // ── Public ────────────────────────────────────────────────────────────────────
