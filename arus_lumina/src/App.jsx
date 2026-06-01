@@ -1,15 +1,15 @@
 // App.jsx
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import ScrollToTop from "./Components/User/Scrolltotop";
+import ScrollToTop from "./Components/User/Scrolltotop.jsx";
 
-import AdminLogin from './pages/Admin/AdmimnLogin';
-import AdminLayout from './Components/Admin/AdminLayout';
-import UserLayout from './Components/User/UserLayout';
-import UserNavbar from './Components/User/Navbar';
-import UserFooter from './Components/User/Footer';
-import HomePage from './pages/User/HomePages';
-import UserLoginPage from './pages/User/UserLogin';
-import VendorDashboard from './pages/User/Vendordashboard';
+import AdminLogin from './pages/Admin/AdmimnLogin.jsx';
+import AdminLayout from './Components/Admin/AdminLayout.jsx';
+import UserLayout from './Components/User/UserLayout.jsx';
+import UserNavbar from './Components/User/Navbar.jsx';
+import UserFooter from './Components/User/Footer.jsx';
+import HomePage from './pages/User/HomePages.jsx';
+import UserLoginPage from './pages/User/UserLogin.jsx';
+import VendorDashboard from './pages/User/Vendordashboard.jsx';
 
 const ProtectedRouteAdmin = ({ children }) => {
   const token = localStorage.getItem('al_token');

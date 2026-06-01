@@ -1,12 +1,12 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import CategoryManagement from './Categorymanagement';
-import ServiceManagement from './Servicepage';
-import AdminBookings from './Adminbookings';
-import VendorManagement from './Vendormanagement';
-import Customermanagement from './Customermanagement';
-import SubServicePage from './SubServicePage'
+import Sidebar from './Sidebar.jsx';
+import CategoryManagement from './Categorymanagement.jsx';
+import ServiceManagement from './Servicepage.jsx';
+import AdminBookings from './Adminbookings.jsx';
+import VendorManagement from './Vendormanagement.jsx';
+import Customermanagement from './Customermanagement.jsx';
+import SubServicePage from './SubServicePage.jsx'
 
 // Import your pages here as you create them
 // import Dashboard from '../../pages/Admin/Dashboard';

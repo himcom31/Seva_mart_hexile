@@ -2,13 +2,13 @@
 // src/components/UserLayout.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
-import VendorRegister from '../../pages/User/Vendorregister';
-import VendorLogin from '../../pages/User/VendorLogin';
-import Servicespage  from '../../pages/User/Servicespage';
-import AboutUs from '../../pages/User/Aboutus';
-import TermsAndConditions from '../../Components/User/TermsAndConditions';
-import PrivacyPolicy121 from '../../Components/User/Privacypolicy';
-import ContactUs from '../../Components/User/Contactus';
+import VendorRegister from '../../pages/User/Vendorregister.jsx';
+import VendorLogin from '../../pages/User/Vendorlogin.jsx';
+import Servicespage  from '../../pages/User/Servicespage.jsx';
+import AboutUs from '../../pages/User/Aboutus.jsx';
+import TermsAndConditions from '../../Components/User/TermsAndConditions.jsx';
+import PrivacyPolicy121 from '../../Components/User/Privacypolicy.jsx';
+import ContactUs from '../../Components/User/Contactus.jsx';
 
 
 const UserLayout = () => {
