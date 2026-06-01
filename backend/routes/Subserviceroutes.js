@@ -11,7 +11,7 @@ const {
   getSubServiceById,
   updateSubService,
   deleteSubService,
-} = require('../Controllers/subServiceController');
+} = require('../Controllers/Subservicecontroller');
 
 // ── Upload middleware (mirrors your existing subcategory upload) ──────────────
 const storage = multer.diskStorage({
