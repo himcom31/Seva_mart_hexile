@@ -11,6 +11,8 @@ const injectStyles = () => {
   s.textContent = `
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
+    * { box-sizing: border-box; }
+
     .hero-root {
       font-family: 'Outfit', sans-serif;
     }
@@ -20,7 +22,7 @@ const injectStyles = () => {
       background: linear-gradient(135deg, #f0eeff 0%, #f7f0ff 40%, #eef2ff 100%);
     }
 
-    /* Purple blob behind images */
+    /* Purple blob behind images — hidden on mobile */
     .hero-blob {
       position: absolute;
       right: 0;
@@ -57,8 +59,8 @@ const injectStyles = () => {
 
     /* Stat icon circles */
     .hero-stat-icon {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: 1.5px solid #d1d5db;
       display: flex;
@@ -79,9 +81,9 @@ const injectStyles = () => {
       gap: 10px;
       position: absolute;
       top: 18%;
-      left: 8%;
+      left: 4%;
       z-index: 10;
-      min-width: 170px;
+      min-width: 160px;
     }
 
     /* Booking badge */
@@ -110,7 +112,8 @@ const injectStyles = () => {
       font-weight: 500;
       color: #374151;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      white-space: nowrap;
     }
     .hero-pill:hover {
       border-color: #e91e8c;
@@ -127,11 +130,95 @@ const injectStyles = () => {
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
+    /* ── Mobile image strip (shown on mobile only) ── */
+    .hero-mobile-img {
+      display: none;
+    }
+
+    /* ── Stats grid on mobile ── */
+    .hero-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .hero-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-divider {
+      display: none;
+    }
+
+    /* ── Mobile badges row (shown on mobile only) ── */
+    .hero-mobile-badges {
+      display: none;
+    }
+
+    /* ─────────────────────────────────────────
+       RESPONSIVE BREAKPOINTS
+    ───────────────────────────────────────── */
+
+    /* Large screens: show desktop image panel */
+    @media (min-width: 1024px) {
+      .hero-blob { display: block; }
+      .hero-rating-badge { display: flex; }
+      .hero-booking-badge { display: flex; }
+      .hero-desktop-img { display: flex; }
+      .hero-mobile-img { display: none; }
+      .hero-mobile-badges { display: none; }
+      .hero-divider { display: block; }
+    }
+
+    /* Below 1024px: hide desktop image panel, show mobile image */
+    @media (max-width: 1023px) {
       .hero-blob { display: none; }
-      .hero-rating-badge { display: none; }
-      .hero-booking-badge { display: none; }
+      .hero-rating-badge { display: none !important; }
+      .hero-booking-badge { display: none !important; }
+      .hero-desktop-img { display: none !important; }
+      .hero-mobile-img { display: flex; }
+      .hero-mobile-badges { display: flex; }
+    }
+
+    /* Tablet (640–1023px) */
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .hero-mobile-img img {
+        max-height: 320px;
+      }
+      .hero-stats {
+        gap: 20px;
+      }
+    }
+
+    /* Phone (< 640px) */
+    @media (max-width: 639px) {
+      .hero-mobile-img img {
+        max-height: 240px;
+      }
+      .hero-stats {
+        gap: 12px;
+      }
+      .hero-stat-icon {
+        width: 36px;
+        height: 36px;
+      }
+      .hero-pill {
+        font-size: 0.75rem;
+        padding: 4px 11px;
+      }
+    }
+
+    /* Very small phones */
+    @media (max-width: 380px) {
+      .hero-mobile-img img {
+        max-height: 200px;
+      }
+      .hero-stats {
+        flex-direction: column;
+        gap: 10px;
+      }
     }
   `;
   document.head.appendChild(s);
@@ -164,133 +251,226 @@ export default function Hero() {
   }, [displayed, deleting, wordIdx]);
 
   return (
-    <section className="hero-root hero-bg relative overflow-hidden min-h-[420px] md:min-h-[480px] lg:min-h-[520px]">
+    <section className="hero-root hero-bg relative overflow-hidden">
 
-      {/* Purple blob */}
+      {/* Purple blob (desktop only) */}
       <div className="hero-blob" />
 
-      {/* ── Content grid ── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 lg:px-16 flex items-center min-h-[420px] md:min-h-[480px] lg:min-h-[520px]">
+      {/* ── Main wrapper ── */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-16">
 
-        {/* LEFT — text & stats */}
-        <div className="w-full lg:w-[52%] pt-10 pb-8 lg:py-0">
+        {/* ── MOBILE / TABLET layout: stacked column ── */}
+        {/* ── DESKTOP layout: side-by-side row (handled via lg: classes) ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:min-h-[520px]">
 
-          {/* Headline */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
-            Get your{" "}
-            <span className="hero-typed">{displayed}</span>
-            <span className="hero-cursor" aria-hidden="true" />
-          </h1>
+          {/* ─── LEFT: Text content ─── */}
+          <div className="w-full lg:w-[52%] pt-8 sm:pt-10 lg:py-0 pb-6 lg:pb-0">
 
-          {/* Subtitle */}
-          <p className="text-gray-500 text-base sm:text-lg mb-8 max-w-md leading-relaxed">
-            We can connect you to the right Service,<br className="hidden sm:block" />
-            first time and everytime.
-          </p>
+            {/* Headline */}
+            <h1
+              style={{ lineHeight: 1.15 }}
+              className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-3 sm:mb-4"
+            >
+              Get your{" "}
+              <span className="hero-typed">{displayed}</span>
+              <span className="hero-cursor" aria-hidden="true" />
+            </h1>
 
-          {/* Popular Searches */}
-          <div className="flex flex-wrap items-center gap-2 mb-10">
-            <span className="text-gray-800 font-semibold text-sm mr-1">Popular Searches</span>
-            {["Electrical", "Catering Services", "Removal"].map((tag) => (
-              <span key={tag} className="hero-pill">{tag}</span>
-            ))}
-          </div>
+            {/* Subtitle */}
+            <p className="text-gray-500 text-sm sm:text-base lg:text-lg mb-5 sm:mb-7 max-w-md leading-relaxed">
+              We can connect you to the right Service,
+              first time and everytime.
+            </p>
 
-          {/* Stats row */}
-          <div className="flex flex-wrap gap-6 sm:gap-10">
+            {/* Popular Searches */}
+            <div className="flex flex-wrap items-center gap-2 mb-6 sm:mb-8">
+              <span className="text-gray-800 font-semibold text-sm mr-1 whitespace-nowrap">
+                Popular Searches
+              </span>
+              {["Electrical", "Catering Services", "Removal"].map((tag) => (
+                <span key={tag} className="hero-pill">{tag}</span>
+              ))}
+            </div>
 
-            {/* Verified Providers */}
-            <div className="flex items-center gap-3">
-              <div className="hero-stat-icon">
-                <svg width="22" height="22" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
-                  <path d="M17 20H7a4 4 0 0 1-4-4v-1a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v1a4 4 0 0 1-4 4Z"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
+            {/* ── Mobile floating badges row ── */}
+            <div
+              className="hero-mobile-badges flex-wrap gap-3 mb-6"
+              style={{ alignItems: "center" }}
+            >
+              {/* Rating */}
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 12,
+                  boxShadow: "0 3px 12px rgba(0,0,0,0.09)",
+                  padding: "8px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: "1.1rem" }}>⭐</span>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: "0.9rem", color: "#111", lineHeight: 1.2 }}>4 / 5</p>
+                  <p style={{ fontSize: "0.7rem", color: "#9ca3af" }}>(300 reviews)</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900 leading-none">215+</p>
-                <p className="text-xs text-gray-500 mt-0.5">Verified Providers</p>
+
+              {/* Booking */}
+              <div
+                style={{
+                  background: "#fff",
+                  borderRadius: 10,
+                  boxShadow: "0 3px 10px rgba(0,0,0,0.08)",
+                  padding: "8px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: "50%",
+                    background: "#22c55e",
+                    flexShrink: 0,
+                    display: "inline-block",
+                  }}
+                />
+                <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "#374151", whiteSpace: "nowrap" }}>
+                  300 Bookings Done
+                </span>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block w-px bg-gray-200 self-stretch" />
+            {/* Stats row */}
+            <div className="hero-stats mb-8 lg:mb-0">
 
-            {/* Services Completed */}
-            <div className="flex items-center gap-3">
-              <div className="hero-stat-icon">
-                <svg width="22" height="22" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
-                  <rect x="3" y="3" width="18" height="18" rx="3"/>
-                  <polyline points="8 12 11 15 16 9"/>
-                </svg>
+              {/* Verified Providers */}
+              <div className="hero-stat-item">
+                <div className="hero-stat-icon">
+                  <svg width="20" height="20" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
+                    <path d="M17 20H7a4 4 0 0 1-4-4v-1a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v1a4 4 0 0 1-4 4Z"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">215+</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Verified Providers</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900 leading-none">500+</p>
-                <p className="text-xs text-gray-500 mt-0.5">Services Completed</p>
+
+              {/* Divider */}
+              <div className="hero-divider w-px bg-gray-200 self-stretch" />
+
+              {/* Services Completed */}
+              <div className="hero-stat-item">
+                <div className="hero-stat-icon">
+                  <svg width="20" height="20" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/>
+                    <polyline points="8 12 11 15 16 9"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">500+</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Services Completed</p>
+                </div>
               </div>
+
+              {/* Divider */}
+              <div className="hero-divider w-px bg-gray-200 self-stretch" />
+
+              {/* Reviews */}
+              <div className="hero-stat-item">
+                <div className="hero-stat-icon">
+                  <svg width="20" height="20" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 leading-none">2000</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Reviews Globally</p>
+                </div>
+              </div>
+
             </div>
-
-            {/* Divider */}
-            <div className="hidden sm:block w-px bg-gray-200 self-stretch" />
-
-            {/* Reviews */}
-            <div className="flex items-center gap-3">
-              <div className="hero-stat-icon">
-                <svg width="22" height="22" fill="none" stroke="#374151" strokeWidth="1.6" viewBox="0 0 24 24">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900 leading-none">2000</p>
-                <p className="text-xs text-gray-500 mt-0.5">Reviews Globally</p>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* RIGHT — images + floating badges */}
-        <div className="hidden lg:flex flex-1 relative items-end justify-end h-[480px] lg:h-[520px]">
-
-          {/* Rating badge — floats top-left of image area */}
-          <div className="hero-rating-badge">
-            <span className="text-yellow-400 text-xl">⭐</span>
-            <div>
-              <p className="font-bold text-gray-900 text-base leading-tight">4 / 5</p>
-              <p className="text-gray-400 text-xs">(300 reviews)</p>
-            </div>
           </div>
 
-          {/* Booking completed badge — top-right */}
-          <div className="hero-booking-badge">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
-            <span className="text-gray-700 text-sm font-medium">300 Booking Completed</span>
-          </div>
-
-          {/* Hero images */}
-          <div className="hero-img-wrap relative flex items-end justify-end gap-0 h-full w-full">
-
-            {/* Worker 1 — male with drill */}
+          {/* ─── MOBILE / TABLET: centered image strip ─── */}
+          <div
+            className="hero-mobile-img w-full justify-center items-end pb-0"
+            style={{ minHeight: 200 }}
+          >
             <img
               src="/banner.webp"
-              alt="Male service provider"
-              className="relative z-10 h-[90%] w-auto object-contain object-bottom drop-shadow-xl"
-              style={{ animationDelay: "0.3s", maxWidth: "520px" }}
-              onError={(e) => { e.target.style.display = 'none'; }}
+              alt="Service provider"
+              style={{
+                maxHeight: "100%",
+                width: "auto",
+                objectFit: "contain",
+                objectPosition: "bottom",
+                animationDelay: "0.3s",
+                maxWidth: "100%",
+                display: "block",
+              }}
+              onError={(e) => { e.target.style.display = "none"; }}
             />
-
-            {/* Worker 2 — female */}
-            <img
-              src="/images/hero-worker-female.png"
-              alt="Female service provider"
-              className="relative z-10 h-[80%] w-auto object-contain object-bottom drop-shadow-xl -ml-8"
-              style={{ animationDelay: "0.25s", maxWidth: "220px" }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-
           </div>
-        </div>
 
+          {/* ─── DESKTOP: floating image panel ─── */}
+          <div
+            className="hero-desktop-img flex-1 relative items-end justify-end"
+            style={{ height: 520 }}
+          >
+            {/* Rating badge */}
+            <div className="hero-rating-badge">
+              <span style={{ fontSize: "1.2rem" }}>⭐</span>
+              <div>
+                <p style={{ fontWeight: 700, color: "#111", fontSize: "1rem", lineHeight: 1.2 }}>4 / 5</p>
+                <p style={{ color: "#9ca3af", fontSize: "0.72rem" }}>(300 reviews)</p>
+              </div>
+            </div>
+
+            {/* Booking badge */}
+            <div className="hero-booking-badge">
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: "#22c55e",
+                  flexShrink: 0,
+                  display: "inline-block",
+                }}
+              />
+              <span style={{ fontSize: "0.875rem", fontWeight: 500, color: "#374151" }}>
+                300 Booking Completed
+              </span>
+            </div>
+
+            {/* Worker images */}
+            <div
+              className="hero-img-wrap relative flex items-end justify-end gap-0 h-full w-full"
+            >
+              <img
+                src="/banner.webp"
+                alt="Male service provider"
+                className="relative z-10 h-[90%] w-auto object-contain object-bottom drop-shadow-xl"
+                style={{ animationDelay: "0.3s", maxWidth: 520 }}
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+              <img
+                src="/images/hero-worker-female.png"
+                alt="Female service provider"
+                className="relative z-10 h-[80%] w-auto object-contain object-bottom drop-shadow-xl -ml-8"
+                style={{ animationDelay: "0.25s", maxWidth: 220 }}
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
   );
