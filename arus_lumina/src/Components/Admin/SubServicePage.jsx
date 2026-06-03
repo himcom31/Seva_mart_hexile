@@ -5,8 +5,8 @@ const API_BASE = `${API_BASE1}/api`;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const token  = () => localStorage.getItem("al_token") || "";
-const imgUrl = (filename) =>
-  filename ? `${API_BASE.replace("/api", "")}/uploads/subservices/${filename}` : null;
+const imgUrl = (url) => url || null;
+
 
 function generateSlug(name) {
   return name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -112,8 +112,8 @@ function SubServiceModal({ open, onClose, onSaved, editItem, services }) {
         status:      editItem.status === "active",
         featured:    !!editItem.featured,
       });
-      setImagePreview(imgUrl(editItem.image));
-      setIconPreview(imgUrl(editItem.icon));
+      setImagePreview(editItem.image || null);
+setIconPreview(editItem.icon || null);
       setImageFile(null);
       setIconFile(null);
     } else {

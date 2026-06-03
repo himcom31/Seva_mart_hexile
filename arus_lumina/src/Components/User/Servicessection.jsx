@@ -226,11 +226,10 @@ function ServiceCard({ service, onBook, onView }) {
   const [imgError, setImgError] = useState(false);
 
   const images = [
-    service.image  ? `${API_BASE1}/uploads/services/${service.image}`  : null,
-    service.image2 ? `${API_BASE1}/uploads/services/${service.image2}` : null,
-    service.image3 ? `${API_BASE1}/uploads/services/${service.image3}` : null,
-  ].filter(Boolean);
-
+  service.image,
+  service.image2,
+  service.image3,
+].filter(Boolean);  // Cloudinary URLs stored directly
   const hasMultiple = images.length > 1;
   const imgSrc = images.length > 0
     ? images[imgIdx]

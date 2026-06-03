@@ -4,8 +4,8 @@ const API_BASE1 = import.meta.env.VITE_API_URL;
 
 const API_BASE = `${API_BASE1}/api`;
 
-const imgUrl = (folder, file) =>
-  file ? `${API_BASE.replace("/api", "")}/uploads/${folder}/${file}` : null;
+const imgUrl = (_, file) => file || null;  // file is now a full Cloudinary URL
+
 
 const fmtPrice = (p) => {
   if (p == null || p === "") return null;
@@ -16,8 +16,8 @@ const fmtPrice = (p) => {
 const pad = (n) => String(n).padStart(2, "0");
 const TODAY = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 const toYMD = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAY_NAMES = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const fmtDisp = (ymd) => {
   if (!ymd) return "";
   const [y, m, d] = ymd.split("-");
@@ -32,7 +32,7 @@ function buildCalendar(year, month) {
   return cells;
 }
 
-const TIME_SLOTS = ["09 AM - 11 AM","11 AM - 01 PM","01 PM - 03 PM","03 PM - 05 PM","05 PM - 07 PM","07 PM - 09 PM"];
+const TIME_SLOTS = ["09 AM - 11 AM", "11 AM - 01 PM", "01 PM - 03 PM", "03 PM - 05 PM", "05 PM - 07 PM", "07 PM - 09 PM"];
 const OTHERS_ENTRY = { id: "__others__", name: "Others", description: "Something not listed above" };
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
@@ -123,11 +123,10 @@ function PopularServicesSection({ onSelectService }) {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`flex-shrink-0 px-4 sm:px-5 py-2 rounded-full text-sm font-semibold border transition-all duration-200 ${
-                activeCategory === cat.id
+              className={`flex-shrink-0 px-4 sm:px-5 py-2 rounded-full text-sm font-semibold border transition-all duration-200 ${activeCategory === cat.id
                   ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white border-transparent shadow-md shadow-pink-200"
                   : "bg-white text-gray-600 border-gray-200 hover:border-pink-300 hover:text-pink-500"
-              }`}
+                }`}
             >
               {cat.name}
             </button>
@@ -170,7 +169,8 @@ function PopularServicesSection({ onSelectService }) {
           {/* 2-col on mobile, 4-col on lg */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 max-w-6xl mx-auto">
             {services.map((svc, idx) => {
-              const thumb = imgUrl("services", svc.image) || "https://placehold.co/400x260/f1f5f9/94a3b8?text=Service";
+              const thumb = svc.image || "https://placehold.co/400x260/f1f5f9/94a3b8?text=Service";
+
               const lowestPrice = fmtPrice(svc.price);
               return (
                 <div
@@ -270,9 +270,9 @@ function ServiceDetailPage({ service, onClose }) {
   if (!service) return null;
 
   const galleryImages = [
-    imgUrl("services", service.image),
-    imgUrl("services", service.image2),
-    imgUrl("services", service.image3),
+    service.image,
+    service.image2,
+    service.image3,
   ].filter(Boolean);
 
   const mainImg = galleryImages[activeImg] || "https://placehold.co/800x500/f1f5f9/94a3b8?text=Service";
@@ -364,9 +364,8 @@ function ServiceDetailPage({ service, onClose }) {
                 {galleryImages.map((img, i) => (
                   <button
                     key={i} onClick={() => setActiveImg(i)}
-                    className={`w-14 h-10 sm:w-16 sm:h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${
-                      activeImg === i ? "border-pink-500" : "border-gray-200 hover:border-pink-300"
-                    }`}
+                    className={`w-14 h-10 sm:w-16 sm:h-12 rounded-lg overflow-hidden border-2 transition-all flex-shrink-0 ${activeImg === i ? "border-pink-500" : "border-gray-200 hover:border-pink-300"
+                      }`}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -477,11 +476,10 @@ function ServiceDetailPage({ service, onClose }) {
                 {service.status && (
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Status</span>
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
-                      service.status === "active"
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${service.status === "active"
                         ? "bg-green-50 text-green-600 border border-green-200"
                         : "bg-red-50 text-red-600 border border-red-200"
-                    }`}>{service.status}</span>
+                      }`}>{service.status}</span>
                   </div>
                 )}
                 {subServices.length > 0 && (
@@ -493,11 +491,10 @@ function ServiceDetailPage({ service, onClose }) {
                 {service.verify_status && (
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Verify</span>
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
-                      service.verify_status === "verified" ? "bg-green-50 text-green-600 border border-green-200"
-                      : service.verify_status === "rejected" ? "bg-red-50 text-red-600 border border-red-200"
-                      : "bg-yellow-50 text-yellow-600 border border-yellow-200"
-                    }`}>{service.verify_status}</span>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize ${service.verify_status === "verified" ? "bg-green-50 text-green-600 border border-green-200"
+                        : service.verify_status === "rejected" ? "bg-red-50 text-red-600 border border-red-200"
+                          : "bg-yellow-50 text-yellow-600 border border-yellow-200"
+                      }`}>{service.verify_status}</span>
                   </div>
                 )}
               </div>
@@ -579,9 +576,8 @@ function CustomDatePicker({ value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 w-full border-2 rounded-xl px-3 py-2.5 text-sm font-medium bg-white text-gray-800 transition-all ${
-          open ? "border-indigo-500 ring-2 ring-indigo-100" : "border-gray-200 hover:border-indigo-400"
-        }`}
+        className={`flex items-center gap-2 w-full border-2 rounded-xl px-3 py-2.5 text-sm font-medium bg-white text-gray-800 transition-all ${open ? "border-indigo-500 ring-2 ring-indigo-100" : "border-gray-200 hover:border-indigo-400"
+          }`}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
           <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -616,12 +612,11 @@ function CustomDatePicker({ value, onChange }) {
                 <button
                   key={i} type="button" disabled={past}
                   onClick={() => select(d)}
-                  className={`aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ${
-                    sel ? "bg-indigo-500 text-white font-bold"
-                    : past ? "text-gray-300 line-through cursor-not-allowed"
-                    : tod ? "bg-green-50 text-green-600 font-bold hover:bg-green-100"
-                    : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
-                  }`}
+                  className={`aspect-square flex items-center justify-center text-xs font-medium rounded-lg transition-all ${sel ? "bg-indigo-500 text-white font-bold"
+                      : past ? "text-gray-300 line-through cursor-not-allowed"
+                        : tod ? "bg-green-50 text-green-600 font-bold hover:bg-green-100"
+                          : "text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+                    }`}
                 >
                   {d.getDate()}
                 </button>
@@ -707,13 +702,12 @@ function SubServicePicker({ serviceId, selected, onChange, hasError }) {
             return (
               <label
                 key={ss.id}
-                className={`flex items-center gap-3 border-2 rounded-xl px-3 py-2.5 cursor-pointer transition-all select-none active:scale-[0.98] ${
-                  checked
+                className={`flex items-center gap-3 border-2 rounded-xl px-3 py-2.5 cursor-pointer transition-all select-none active:scale-[0.98] ${checked
                     ? "border-indigo-500 bg-indigo-50 shadow-sm shadow-indigo-100"
                     : isOthers
-                    ? "border-dashed border-gray-300 hover:border-indigo-300 bg-white"
-                    : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/40 bg-white"
-                }`}
+                      ? "border-dashed border-gray-300 hover:border-indigo-300 bg-white"
+                      : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/40 bg-white"
+                  }`}
               >
                 <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggle(ss)} />
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${isOthers ? "bg-indigo-100" : "bg-gray-100"}`}>
@@ -722,7 +716,7 @@ function SubServicePicker({ serviceId, selected, onChange, hasError }) {
                       <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
                     </svg>
                   ) : ss.icon ? (
-                    <img src={`${API_BASE.replace("/api", "")}/uploads/subservices/${ss.icon}`} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+                    <img src={ss.icon} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
                   ) : (
                     <span className="text-sm font-bold text-gray-400">{ss.name?.charAt(0)?.toUpperCase()}</span>
                   )}
@@ -737,9 +731,8 @@ function SubServicePicker({ serviceId, selected, onChange, hasError }) {
                     </span>
                   )}
                 </div>
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                  checked ? "border-indigo-500 bg-indigo-500" : "border-gray-300 bg-white"
-                }`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${checked ? "border-indigo-500 bg-indigo-500" : "border-gray-300 bg-white"
+                  }`}>
                   {checked && (
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
                       <polyline points="20 6 9 17 4 12" />
@@ -780,9 +773,8 @@ function BookingModal({ service, onClose }) {
   const [imgErr, setImgErr] = useState(false);
 
   if (!service) return null;
-  const imgSrc = service.image
-    ? `${API_BASE.replace("/api", "")}/uploads/services/${service.image}`
-    : "https://placehold.co/80x80/e2e8f0/94a3b8?text=S";
+  const imgSrc = service.image || "https://placehold.co/80x80/e2e8f0/94a3b8?text=S";
+
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -918,9 +910,8 @@ function BookingModal({ service, onClose }) {
                         <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">#{service.code}</span>
                       )}
                       {service.status && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                          service.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                        }`}>{service.status}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${service.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          }`}>{service.status}</span>
                       )}
                       {service.verify_status === "verified" && (
                         <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">✓ Verified</span>
@@ -969,11 +960,10 @@ function BookingModal({ service, onClose }) {
                         <button
                           key={slot} type="button"
                           onClick={() => set("preferred_time", slot)}
-                          className={`px-2 py-2.5 rounded-xl text-xs font-semibold border transition-all text-center active:scale-95 ${
-                            form.preferred_time === slot
+                          className={`px-2 py-2.5 rounded-xl text-xs font-semibold border transition-all text-center active:scale-95 ${form.preferred_time === slot
                               ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100"
                               : "border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50"
-                          }`}
+                            }`}
                         >
                           {slot}
                         </button>

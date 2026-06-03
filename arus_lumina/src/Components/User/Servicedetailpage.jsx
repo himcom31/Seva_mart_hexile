@@ -32,10 +32,10 @@ export default function ServiceDetailPage({ service, onClose, onBook: onBookProp
 
   // Collect all gallery images
   const galleryImages = [
-    service.image  ? `${API_BASE1}/uploads/services/${service.image}`  : null,
-    service.image2 ? `${API_BASE1}/uploads/services/${service.image2}` : null,
-    service.image3 ? `${API_BASE1}/uploads/services/${service.image3}` : null,
-  ].filter(Boolean);
+  service.image,
+  service.image2,
+  service.image3,
+].filter(Boolean);
 
   const mainImg = galleryImages[0] || "https://placehold.co/600x380/e2e8f0/94a3b8?text=Service";
 
@@ -151,9 +151,8 @@ export default function ServiceDetailPage({ service, onClose, onBook: onBookProp
                   <div className="sd-subservices">
                     {subServices.map(ss => {
                       const price = fmtPrice(ss.price);
-                      const icon = ss.icon
-                        ? `${API_BASE1}/uploads/subservices/${ss.icon}`
-                        : null;
+                      const icon = ss.icon || null;  // already a full URL if using Cloudinary
+
                       return (
                         <div key={ss.id} className="sd-subsvc-row">
                           <div className="sd-subsvc-left">

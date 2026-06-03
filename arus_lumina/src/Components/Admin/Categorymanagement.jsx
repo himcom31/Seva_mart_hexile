@@ -3,7 +3,7 @@ import { Search, Plus, Pencil, Trash2, Settings, ChevronDown, X, Upload } from "
 
 const API_BASE121 = import.meta.env.VITE_API_URL;
 const API_BASE = `${API_BASE121}/api/categories`;
-const UPLOADS  = `${API_BASE121}/uploads/categories/`;
+
 
 const token = () => localStorage.getItem("al_token") || "";
 const authHeaders = () => ({ Authorization: `Bearer ${token()}` });
@@ -72,8 +72,8 @@ function CategoryModal({ editData, onClose, onSaved }) {
   });
   const [imageFile, setImageFile] = useState(null);
   const [iconFile, setIconFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(editData?.image ? UPLOADS + editData.image : null);
-  const [iconPreview, setIconPreview] = useState(editData?.icon ? UPLOADS + editData.icon : null);
+  const [imagePreview, setImagePreview] = useState(editData?.image || null);
+const [iconPreview, setIconPreview] = useState(editData?.icon || null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -349,7 +349,7 @@ function CategoryCard({ cat, idx, onEdit, onDelete, onToggled }) {
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
           {cat.image
-            ? <img src={UPLOADS + cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
+            ? <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
             : <div className="w-full h-full flex items-center justify-center text-slate-400 text-[14px] font-bold uppercase">{cat.name?.charAt(0)}</div>
           }
         </div>
@@ -597,7 +597,7 @@ export default function CategoryManagement() {
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
                           {cat.image
-                            ? <img src={UPLOADS + cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
+                            ? <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
                             : <div className="w-full h-full flex items-center justify-center text-slate-300 text-[11px] font-bold uppercase">{cat.name?.charAt(0)}</div>
                           }
                         </div>

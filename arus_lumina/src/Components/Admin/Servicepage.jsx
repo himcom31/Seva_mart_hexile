@@ -5,8 +5,8 @@ const API_BASE1 = import.meta.env.VITE_API_URL;
 
 const API_BASE = `${API_BASE1}/api`;
 const token = () => localStorage.getItem("al_token") || "";
-const imgUrl = (filename, folder = "services") =>
-  filename ? `${API_BASE.replace("/api", "")}/uploads/${folder}/${filename}` : null;
+const imgUrl = (url) => url || null;
+
 const generateSlug = (name) =>
   name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
@@ -133,8 +133,8 @@ function ServiceModal({ open, onClose, onSaved, editItem, categories }) {
           featured: !!editItem.featured,
           verify_status: editItem.verify_status ?? "pending",
         });
-        setImagePrev(imgUrl(editItem.image));
-        setIconPrev(imgUrl(editItem.icon));
+      setImagePrev(editItem.image || null);
+setIconPrev(editItem.icon || null);
       } else {
         setForm(blankForm);
         setImagePrev(null); setIconPrev(null);

@@ -16,11 +16,9 @@ const FALLBACK_ICONS = [
  * under  /uploads/categories/  on the server.
  * Full URL → http://localhost:5000/uploads/categories/1748123456-photo.png
  */
-const buildImageUrl = (filename) => {
-  if (!filename || typeof filename !== "string") return null;
-  if (filename.startsWith("http://") || filename.startsWith("https://")) return filename;
-  if (filename.startsWith("/uploads")) return `${SERVER_BASE}${filename}`;
-  return `${SERVER_BASE}/uploads/categories/${filename}`;
+const buildImageUrl = (url) => {
+  if (!url || typeof url !== "string") return null;
+  return url; // Cloudinary URLs are stored directly now
 };
 
 /* ── Smart icon renderer ── */

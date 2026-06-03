@@ -5,10 +5,8 @@ import ServiceDetailPage from "../../Components/User/Servicedetailpage.jsx"; // 
 const API_BAS1 = import.meta.env.VITE_API_URL;
 
 const API_BASE = `${API_BAS1}/api`;
-const IMG_BASE = `${API_BAS1}/uploads/services`;
-
-const imgSrc = (filename) =>
-  filename ? `${IMG_BASE}/${filename}` : "https://placehold.co/400x260/e2e8f0/94a3b8?text=No+Image";
+const imgSrc = (url) =>
+  url || "https://placehold.co/400x260/e2e8f0/94a3b8?text=No+Image";
 
 const sortServices = (list, mode) => {
   const copy = [...list];
@@ -22,8 +20,8 @@ const sortServices = (list, mode) => {
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
-  { value: "a-z",    label: "Name: A → Z" },
-  { value: "z-a",    label: "Name: Z → A" },
+  { value: "a-z", label: "Name: A → Z" },
+  { value: "z-a", label: "Name: Z → A" },
 ];
 
 const ITEMS_PER_PAGE = 9;
@@ -36,6 +34,7 @@ function ServiceCard({ service, onViewDetail, onBook }) {
       <div className="card-image-wrap" onClick={() => onViewDetail(service)} style={{ cursor: "pointer" }}>
         <img
           src={imgError ? "https://placehold.co/400x260/e2e8f0/94a3b8?text=No+Image" : imgSrc(service.image)}
+
           alt={service.name}
           onError={() => setImgError(true)}
           className="card-image"
@@ -50,8 +49,8 @@ function ServiceCard({ service, onViewDetail, onBook }) {
         </h3>
         <div className="card-location">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-            <circle cx="12" cy="10" r="3"/>
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+            <circle cx="12" cy="10" r="3" />
           </svg>
           <span>Patna, Bihar</span>
         </div>
@@ -70,23 +69,23 @@ function ServiceCard({ service, onViewDetail, onBook }) {
 
 // ── Main ServicesPage ─────────────────────────────────────────────────────────
 export default function ServicesPage() {
-  const [allServices,    setAllServices]    = useState([]);
-  const [categories,     setCategories]     = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [error,          setError]          = useState(null);
+  const [allServices, setAllServices] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [search,         setSearch]         = useState("");
+  const [search, setSearch] = useState("");
   // Read ?category= from URL so navbar category links land on the right filter
   const [activeCategory, setActiveCategory] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("category") || "all";
   });
-  const [showMore,       setShowMore]       = useState(false);
-  const [sortMode,       setSortMode]       = useState("newest");
-  const [page,           setPage]           = useState(1);
+  const [showMore, setShowMore] = useState(false);
+  const [sortMode, setSortMode] = useState("newest");
+  const [page, setPage] = useState(1);
 
   // detailService: opens ServiceDetailPage (full-screen)
-  const [detailService,  setDetailService]  = useState(null);
+  const [detailService, setDetailService] = useState(null);
   // bookingService: opens BookingModal
   const [bookingService, setBookingService] = useState(null);
 
@@ -153,9 +152,9 @@ export default function ServicesPage() {
     return sortServices(list, sortMode);
   }, [allServices, activeCategory, search, sortMode]);
 
-  const results    = filtered();
+  const results = filtered();
   const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
-  const paginated  = results.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const paginated = results.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const resetFilters = () => {
     setSearch(""); handleCategoryChange("all"); setSortMode("newest");
@@ -182,8 +181,8 @@ export default function ServicesPage() {
           <div className="sidebar-header">
             <div className="sidebar-title-row">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/>
-                <line x1="4" y1="18" x2="10" y2="18"/>
+                <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="14" y2="12" />
+                <line x1="4" y1="18" x2="10" y2="18" />
               </svg>
               <span className="sidebar-title">Filters</span>
             </div>
@@ -194,7 +193,7 @@ export default function ServicesPage() {
             <label className="filter-label">Search By Keyword</label>
             <div className="search-input-wrap">
               <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
                 className="search-input"
@@ -209,7 +208,7 @@ export default function ServicesPage() {
             <div className="filter-toggle-row">
               <span className="filter-label">Categories</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9"/>
+                <polyline points="6 9 12 15 18 9" />
               </svg>
             </div>
             <ul className="category-list">
@@ -256,7 +255,7 @@ export default function ServicesPage() {
                   ))}
                 </select>
                 <svg className="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="6 9 12 15 18 9"/>
+                  <polyline points="6 9 12 15 18 9" />
                 </svg>
               </div>
             </div>
@@ -264,7 +263,7 @@ export default function ServicesPage() {
 
           {loading ? (
             <div className="state-box">
-              <div className="spinner"/>
+              <div className="spinner" />
               <p>Loading services…</p>
             </div>
           ) : error ? (
