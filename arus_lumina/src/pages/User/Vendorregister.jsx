@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE1= import.meta.env.VITE_API_URL;
-const API_BASE = `${API_BASE1}/api`;
-
+const API_BASE1 = import.meta.env.VITE_API_URL;
+const API_BASE  = `${API_BASE1}/api`;
 
 const injectStyles = () => {
   if (document.getElementById("vendor-modal-styles")) return;
@@ -112,6 +111,66 @@ const injectStyles = () => {
     .vrm-input.error { border-color: #f87171; }
     .vrm-input option { color: #111; background: #fff; }
     .vrm-input:disabled { background: #fafafa; color: #bbb; cursor: not-allowed; }
+
+    /* ── Multi-select vendor category picker ── */
+    .vrm-multiselect-box {
+      border: 1.5px solid #e8e8e8; border-radius: 10px;
+      padding: 10px 12px; background: #fff;
+      transition: border-color 0.18s, box-shadow 0.18s; cursor: text;
+    }
+    .vrm-multiselect-box:focus-within {
+      border-color: #c2185b; box-shadow: 0 0 0 3px rgba(194,24,91,0.08);
+    }
+    .vrm-chips {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;
+    }
+    .vrm-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #fce4ec; color: #c2185b;
+      font-family: 'Outfit', sans-serif; font-size: 0.78rem; font-weight: 600;
+      padding: 3px 9px 3px 10px; border-radius: 20px;
+      animation: vrm-chip-in 0.18s ease;
+    }
+    @keyframes vrm-chip-in { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+    .vrm-chip-remove {
+      background: none; border: none; cursor: pointer; color: #c2185b;
+      font-size: 0.85rem; padding: 0; line-height: 1; display: flex; align-items: center;
+      opacity: 0.6; transition: opacity 0.15s;
+    }
+    .vrm-chip-remove:hover { opacity: 1; }
+    .vrm-multiselect-search {
+      border: none; outline: none; font-family: 'Outfit', sans-serif;
+      font-size: 0.88rem; color: #111; width: 100%; background: transparent;
+      min-width: 120px;
+    }
+    .vrm-multiselect-search::placeholder { color: #bbb; }
+    .vrm-dropdown {
+      border: 1.5px solid #e8e8e8; border-radius: 10px; background: #fff;
+      max-height: 180px; overflow-y: auto; margin-top: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.10); z-index: 100; position: relative;
+      scrollbar-width: thin; scrollbar-color: #e8e8e8 transparent;
+    }
+    .vrm-dropdown-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: #111;
+      transition: background 0.12s;
+    }
+    .vrm-dropdown-item:hover { background: #fce4ec; }
+    .vrm-dropdown-item.selected { background: #fce4ec; color: #c2185b; font-weight: 600; }
+    .vrm-dropdown-item-check {
+      width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #e0e0e0;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .vrm-dropdown-item.selected .vrm-dropdown-item-check {
+      background: #c2185b; border-color: #c2185b; color: #fff;
+    }
+    .vrm-dropdown-empty {
+      padding: 12px 14px; font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem; color: #bbb; text-align: center;
+    }
+    /* ── end multi-select ── */
 
     .vrm-phone-row {
       display: flex; border: 1.5px solid #e8e8e8; border-radius: 10px;
@@ -281,21 +340,127 @@ const getStrength = (pw) => {
   return { score, ...map[score] };
 };
 
-// Only 2 steps now — Personal & Service
 const STEPS = ["Personal", "Service"];
 
+// ── Multi-select vendor category component ────────────────────────────────────
+function VendorCategoryMultiSelect({ vendorCategories, loading, selectedIds, onChange }) {
+  const [search, setSearch]       = useState("");
+  const [open, setOpen]           = useState(false);
+  const containerRef              = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = vendorCategories.filter(
+    (vc) =>
+      !search.trim() ||
+      vc.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle = (id) => {
+    if (selectedIds.includes(id)) {
+      onChange(selectedIds.filter((x) => x !== id));
+    } else {
+      onChange([...selectedIds, id]);
+    }
+  };
+
+  const removeChip = (id, e) => {
+    e.stopPropagation();
+    onChange(selectedIds.filter((x) => x !== id));
+  };
+
+  const selectedItems = vendorCategories.filter((vc) => selectedIds.includes(vc.id));
+
+  return (
+    <div ref={containerRef}>
+      <div
+        className="vrm-multiselect-box"
+        onClick={() => { setOpen(true); }}
+      >
+        <div className="vrm-chips">
+          {selectedItems.map((vc) => (
+            <span key={vc.id} className="vrm-chip">
+              
+              {vc.name}
+              <button
+                type="button"
+                className="vrm-chip-remove"
+                onClick={(e) => removeChip(vc.id, e)}
+                aria-label={`Remove ${vc.name}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+        <input
+          className="vrm-multiselect-search"
+          type="text"
+          placeholder={selectedItems.length === 0 ? (loading ? "Loading categories…" : "Search & select categories…") : "Add more…"}
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          disabled={loading}
+          autoComplete="off"
+        />
+      </div>
+
+      {open && !loading && (
+        <div className="vrm-dropdown">
+          {filtered.length === 0 ? (
+            <div className="vrm-dropdown-empty">
+              {vendorCategories.length === 0 ? "No vendor categories found." : "No results for that search."}
+            </div>
+          ) : (
+            filtered.map((vc) => {
+              const isSelected = selectedIds.includes(vc.id);
+              return (
+                <div
+                  key={vc.id}
+                  className={`vrm-dropdown-item${isSelected ? " selected" : ""}`}
+                  onMouseDown={(e) => { e.preventDefault(); toggle(vc.id); }}
+                >
+                  <div className="vrm-dropdown-item-check">
+                    {isSelected && <span style={{ fontSize: "0.7rem" }}>✓</span>}
+                  </div>
+                  <span>{vc.name}</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function VendorRegister({ onClose }) {
   injectStyles();
   const navigate = useNavigate();
 
-  const [categories, setCategories]        = useState([]);
-  const [categoriesLoading, setCatLoading] = useState(true);
+  // Vendor categories (from /api/vendor-categories)
+  const [vendorCategories, setVendorCategories] = useState([]);
+  const [vendorCatLoading, setVendorCatLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/categories`)
-      .then(r => r.json())
-      .then(d => { setCategories(d.categories || d.data || []); setCatLoading(false); })
-      .catch(() => setCatLoading(false));
+    fetch(`${API_BASE}/vendor-categories`)
+      .then((r) => r.json())
+      .then((d) => {
+        // API returns { success, data: [...] }
+        setVendorCategories(d.data || d.vendorCategories || []);
+        setVendorCatLoading(false);
+      })
+      .catch(() => setVendorCatLoading(false));
   }, []);
 
   const [step, setStep] = useState(1);
@@ -306,8 +471,9 @@ export default function VendorRegister({ onClose }) {
     country_code: "+91", mobile: "",
     password: "", confirm_password: "",
     // Step 2 — Service
-    aadhaar: "", experience: "", category_id: "",
-    subcategory_id: "", city: "", address: "",
+    aadhaar: "", experience: "",
+    vendor_category_ids: [],   // ← multi-select array
+    city: "", address: "",
     vendor_type: "individual", notes: "",
   });
 
@@ -326,7 +492,6 @@ export default function VendorRegister({ onClose }) {
     return () => { window.removeEventListener("keydown", handler); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  // Mount guard — drops autofill events fired immediately on render
   const mountedRef = useRef(false);
   useEffect(() => {
     const t = setTimeout(() => { mountedRef.current = true; }, 300);
@@ -335,7 +500,11 @@ export default function VendorRegister({ onClose }) {
 
   const set = (field) => (e) => {
     if (!mountedRef.current) return;
-    setForm(f => ({ ...f, [field]: e.target.value }));
+    setForm((f) => ({ ...f, [field]: e.target.value }));
+  };
+
+  const setVendorCatIds = (ids) => {
+    setForm((f) => ({ ...f, vendor_category_ids: ids }));
   };
 
   // ── Validation ──────────────────────────────────────────────────────────────
@@ -357,9 +526,10 @@ export default function VendorRegister({ onClose }) {
     if (!form.aadhaar.trim())              errs.push("Aadhaar number is required.");
     if (form.aadhaar.trim().length !== 12) errs.push("Aadhaar must be exactly 12 digits.");
     if (!form.experience)                  errs.push("Experience is required.");
-    if (!form.category_id)                 errs.push("Service category is required.");
-    if (!form.city.trim())                 errs.push("City is required.");
-    if (!form.address.trim())              errs.push("Address is required.");
+    if (form.vendor_category_ids.length === 0)
+      errs.push("Please select at least one vendor category.");
+    if (!form.city.trim())    errs.push("City is required.");
+    if (!form.address.trim()) errs.push("Address is required.");
     return errs;
   };
 
@@ -373,10 +543,10 @@ export default function VendorRegister({ onClose }) {
 
   const goBack = () => { setErrors([]); setStep(1); };
 
-  // ── Submit (only called from step 2) ───────────────────────────────────────
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step !== 2) return; // safety guard
+    if (step !== 2) return;
 
     setErrors([]);
     const errs = validateStep2();
@@ -393,12 +563,17 @@ export default function VendorRegister({ onClose }) {
       fd.append("password",         form.password);
       fd.append("confirm_password", form.confirm_password);
       fd.append("experience",       form.experience);
-      fd.append("category_id",      form.category_id);
       fd.append("city",             form.city.trim());
       fd.append("address",          form.address.trim());
       fd.append("vendor_type",      form.vendor_type);
-      if (form.subcategory_id)    fd.append("subcategory_id", form.subcategory_id);
-      if (form.notes.trim())      fd.append("notes",          form.notes.trim());
+
+      // Send multiple vendor category IDs
+      // Some backends expect repeated keys; others prefer JSON string
+      form.vendor_category_ids.forEach((id) => fd.append("vendor_category_ids[]", id));
+      // Also send as JSON string as a fallback
+      fd.append("vendor_category_ids", JSON.stringify(form.vendor_category_ids));
+
+      if (form.notes.trim()) fd.append("notes", form.notes.trim());
 
       const res  = await fetch(`${API_BASE}/vendors/register`, { method: "POST", body: fd });
       const data = await res.json();
@@ -466,7 +641,7 @@ export default function VendorRegister({ onClose }) {
           noValidate
           onKeyDown={(e) => { if (e.key === "Enter" && step !== 2) e.preventDefault(); }}
         >
-          {/* Autofill honeypot */}
+          {/* Honeypot */}
           <div className="vrm-honeypot" aria-hidden="true">
             <input type="text"     name="username" tabIndex={-1} readOnly />
             <input type="password" name="password" tabIndex={-1} readOnly />
@@ -501,9 +676,9 @@ export default function VendorRegister({ onClose }) {
                   <label className="vrm-label">Mobile Number *</label>
                   <div className="vrm-phone-row">
                     <div className="vrm-phone-flag">
-                      <span>{COUNTRY_CODES.find(c => c.code === form.country_code)?.flag ?? "🇮🇳"}</span>
+                      <span>{COUNTRY_CODES.find((c) => c.code === form.country_code)?.flag ?? "🇮🇳"}</span>
                       <select value={form.country_code} onChange={set("country_code")} aria-label="Country code">
-                        {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.label}</option>)}
+                        {COUNTRY_CODES.map((c) => <option key={c.code} value={c.code}>{c.code} {c.label}</option>)}
                       </select>
                       <span style={{ fontSize: "0.7rem", color: "#aaa" }}>▾</span>
                     </div>
@@ -521,14 +696,14 @@ export default function VendorRegister({ onClose }) {
                       autoComplete="new-password"
                       value={form.password} onChange={set("password")} />
                     <button type="button" className="vrm-eye"
-                      onClick={() => setShowPass(p => !p)} aria-label={showPass ? "Hide" : "Show"}>
+                      onClick={() => setShowPass((p) => !p)} aria-label={showPass ? "Hide" : "Show"}>
                       {showPass ? "🙈" : "👁"}
                     </button>
                   </div>
                   {form.password && (
                     <>
                       <div className="vrm-strength-bar">
-                        {[1,2,3,4].map(n => (
+                        {[1, 2, 3, 4].map((n) => (
                           <div key={n} className="vrm-strength-seg"
                             style={{ background: n <= strength.score ? strength.color : "#e8e8e8" }} />
                         ))}
@@ -549,7 +724,7 @@ export default function VendorRegister({ onClose }) {
                       style={form.confirm_password && form.confirm_password !== form.password
                         ? { borderColor: "#f87171" } : {}} />
                     <button type="button" className="vrm-eye"
-                      onClick={() => setShowConf(p => !p)} aria-label={showConf ? "Hide" : "Show"}>
+                      onClick={() => setShowConf((p) => !p)} aria-label={showConf ? "Hide" : "Show"}>
                       {showConf ? "🙈" : "👁"}
                     </button>
                   </div>
@@ -580,26 +755,46 @@ export default function VendorRegister({ onClose }) {
                   <label className="vrm-label">Years of Experience *</label>
                   <select className="vrm-input" value={form.experience} onChange={set("experience")} autoComplete="off">
                     <option value="">Select experience</option>
-                    {EXPERIENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    {EXPERIENCE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
 
-                <div className="vrm-field">
-                  <label className="vrm-label">Service Category *</label>
-                  <select className="vrm-input" value={form.category_id} onChange={set("category_id")}
-                    disabled={categoriesLoading} autoComplete="off">
-                    <option value="">{categoriesLoading ? "Loading categories…" : "Select category"}</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                  {!categoriesLoading && categories.length === 0 && (
-                    <span className="vrm-hint" style={{ color: "#ef4444" }}>Could not load categories. Check API.</span>
+                {/* ── Vendor Category Multi-select ── */}
+                <div className="vrm-field vrm-grid-full">
+                  <label className="vrm-label">
+                    Vendor Categories *
+                    {form.vendor_category_ids.length > 0 && (
+                      <span style={{
+                        marginLeft: 8, background: "#c2185b", color: "#fff",
+                        borderRadius: 20, padding: "1px 8px",
+                        fontSize: "0.72rem", fontWeight: 700,
+                      }}>
+                        {form.vendor_category_ids.length} selected
+                      </span>
+                    )}
+                  </label>
+                  <VendorCategoryMultiSelect
+                    vendorCategories={vendorCategories}
+                    loading={vendorCatLoading}
+                    selectedIds={form.vendor_category_ids}
+                    onChange={setVendorCatIds}
+                  />
+                  {!vendorCatLoading && vendorCategories.length === 0 && (
+                    <span className="vrm-hint" style={{ color: "#ef4444" }}>
+                      Could not load vendor categories. Check API.
+                    </span>
+                  )}
+                  {vendorCategories.length > 0 && (
+                    <span className="vrm-hint">
+                      Click to open the list. Select multiple categories that describe your services.
+                    </span>
                   )}
                 </div>
 
                 <div className="vrm-field">
                   <label className="vrm-label">Vendor Type *</label>
                   <select className="vrm-input" value={form.vendor_type} onChange={set("vendor_type")} autoComplete="off">
-                    {VENDOR_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    {VENDOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
                 </div>
 
@@ -644,7 +839,9 @@ export default function VendorRegister({ onClose }) {
                 <button type="button" className="vrm-btn-next" onClick={goNext}>Next →</button>
               ) : (
                 <button className="vrm-btn-next" type="submit" disabled={loading || !!success}>
-                  {loading ? <><span className="vrm-spinner" /> Registering…</> : <>Submit Registration →</>}
+                  {loading
+                    ? <><span className="vrm-spinner" /> Registering…</>
+                    : <>Submit Registration →</>}
                 </button>
               )}
             </div>

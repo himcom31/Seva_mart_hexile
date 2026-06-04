@@ -110,11 +110,12 @@ export default function Sidebar() {
       ]
     },
     {
-      group: "Application",
+      group: "Application",   ///vendor-categories
       items: [
         { label: "Bookings Management", icon: <AlignLeft size={18} />, path: "/admin/bookings" },
         { label: "Vendor Management", icon: <CalendarDays size={18} />, path: "/admin/vendors" },
         { label: "Customer Database", icon: <MessageSquare size={18} />, path: "/admin/customers" },
+        { label: "Vendor Categories", icon: <Globe size={18} />, path: "/admin/vendor-categories" },
       ]
     },
     {

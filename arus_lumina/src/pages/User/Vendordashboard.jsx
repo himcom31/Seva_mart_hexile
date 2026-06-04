@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 
 const API_BASE1 = import.meta.env.VITE_API_URL;
-
 const API_BASE    =  `${API_BASE1}/api`;
 const SERVER_BASE =  `${API_BASE1}`;
 
@@ -14,7 +13,6 @@ const STATUS_CONFIG = {
   cancelled: { label: "Cancelled", bg: "#FEE2E2", color: "#991B1B", dot: "#EF4444" },
 };
 
-// ── Shared localStorage keys (must match VendorLogin.jsx) ────────────────────
 const TOKEN_KEY = "vendorToken";
 const INFO_KEY  = "vendorInfo";
 
@@ -24,8 +22,61 @@ const getCachedInfo = () => {
   catch { return null; }
 };
 
-// ── Login route — must match your React Router config ────────────────────────
 const LOGIN_ROUTE = "/";
+
+// ── Helper: parse vendor categories from API response ─────────────────────────
+// Vendor may have: vendor_category_names (JSON string or array), or category_name (legacy)
+const parseVendorCategories = (vendor) => {
+  if (!vendor) return [];
+  // Preferred: vendor_category_names as JSON array from backend
+  if (vendor.vendor_category_names) {
+    try {
+      const parsed = typeof vendor.vendor_category_names === "string"
+        ? JSON.parse(vendor.vendor_category_names)
+        : vendor.vendor_category_names;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch { /* fall through */ }
+  }
+  // Fallback: legacy single category_name
+  if (vendor.category_name) return [vendor.category_name];
+  return [];
+};
+
+// ── Vendor Category Chips (for banner / profile display) ─────────────────────
+function VendorCategoryChips({ categories, max = 3, light = false }) {
+  if (!categories || categories.length === 0) return (
+    <span style={{ fontSize: "0.75rem", color: light ? "rgba(255,255,255,0.6)" : "#9ca3af" }}>
+      Service Provider
+    </span>
+  );
+
+  const visible = categories.slice(0, max);
+  const extra   = categories.length - max;
+
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+      {visible.map((name, i) => (
+        <span key={i} style={{
+          fontSize: "0.7rem", fontWeight: 700,
+          padding: "2px 8px", borderRadius: 20,
+          background: light ? "rgba(255,255,255,0.18)" : "#ede9fe",
+          color:      light ? "#fff"                   : "#6d28d9",
+          border:     light ? "1px solid rgba(255,255,255,0.25)" : "none",
+          whiteSpace: "nowrap",
+        }}>{name}</span>
+      ))}
+      {extra > 0 && (
+        <span style={{
+          fontSize: "0.7rem", fontWeight: 700,
+          padding: "2px 8px", borderRadius: 20,
+          background: light ? "rgba(255,255,255,0.12)" : "#f3f4f6",
+          color:      light ? "rgba(255,255,255,0.8)"  : "#6b7280",
+          whiteSpace: "nowrap",
+        }}>+{extra} more</span>
+      )}
+    </span>
+  );
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const Icon = {
@@ -128,6 +179,21 @@ function StatusBadge({ status }) {
 // ── Booking Detail Modal ──────────────────────────────────────────────────────
 function BookingDetailModal({ booking, onClose }) {
   if (!booking) return null;
+
+  // Parse vendor categories for this booking
+  const bookingVendorCategories = (() => {
+    if (booking.vendor_category_names) {
+      try {
+        const parsed = typeof booking.vendor_category_names === "string"
+          ? JSON.parse(booking.vendor_category_names)
+          : booking.vendor_category_names;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch { /* fall through */ }
+    }
+    if (booking.category_name) return [booking.category_name];
+    return [];
+  })();
+
   const subServices = (() => {
     try {
       return typeof booking.selected_sub_services === "string"
@@ -188,9 +254,26 @@ function BookingDetailModal({ booking, onClose }) {
 
           {/* Service Info */}
           <Section title="Service">
-            <InfoRow icon={Icon.briefcase} label="Service"  value={booking.service_name} />
-            {booking.category_name && <InfoRow icon={Icon.tag} label="Category" value={booking.category_name} />}
-            {booking.service_code  && <InfoRow icon={Icon.tag} label="Code"     value={`#${booking.service_code}`} />}
+            <InfoRow icon={Icon.briefcase} label="Service" value={booking.service_name} />
+            {/* Vendor Categories — multi */}
+            {bookingVendorCategories.length > 0 && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <span style={{ color: "#9ca3af", flexShrink: 0, marginTop: 1 }}>{Icon.tag}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: "0.72rem", color: "#9ca3af", fontWeight: 600 }}>Vendor Categories: </span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                    {bookingVendorCategories.map((name, i) => (
+                      <span key={i} style={{
+                        fontSize: "0.72rem", fontWeight: 700,
+                        background: "#ede9fe", color: "#6d28d9",
+                        padding: "2px 8px", borderRadius: 20,
+                      }}>{name}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {booking.service_code && <InfoRow icon={Icon.tag} label="Code" value={`#${booking.service_code}`} />}
           </Section>
 
           {/* Customer Info */}
@@ -277,6 +360,21 @@ function InfoRow({ icon, label, value }) {
 // ── Booking Card ──────────────────────────────────────────────────────────────
 function BookingCard({ booking, onViewDetail }) {
   const cfg = STATUS_CONFIG[booking.status] || STATUS_CONFIG.pending;
+
+  // Parse vendor categories for this booking
+  const bookingVendorCategories = (() => {
+    if (booking.vendor_category_names) {
+      try {
+        const parsed = typeof booking.vendor_category_names === "string"
+          ? JSON.parse(booking.vendor_category_names)
+          : booking.vendor_category_names;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch { /* fall through */ }
+    }
+    if (booking.category_name) return [booking.category_name];
+    return [];
+  })();
+
   const subServices = (() => {
     try {
       return typeof booking.selected_sub_services === "string"
@@ -308,13 +406,24 @@ function BookingCard({ booking, onViewDetail }) {
             <h4 style={{ margin: 0, fontSize: "0.92rem", fontWeight: 800, color: "#111827", lineHeight: 1.3, wordBreak: "break-word" }}>
               {booking.service_name}
             </h4>
-            {booking.category_name && (
-              <span style={{
-                display: "inline-block", marginTop: 4,
-                fontSize: "0.68rem", fontWeight: 600,
-                background: "#ede9fe", color: "#6d28d9",
-                padding: "2px 8px", borderRadius: 20,
-              }}>{booking.category_name}</span>
+            {/* Vendor Category chips — multi */}
+            {bookingVendorCategories.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 5 }}>
+                {bookingVendorCategories.slice(0, 2).map((name, i) => (
+                  <span key={i} style={{
+                    fontSize: "0.68rem", fontWeight: 600,
+                    background: "#ede9fe", color: "#6d28d9",
+                    padding: "2px 8px", borderRadius: 20,
+                  }}>{name}</span>
+                ))}
+                {bookingVendorCategories.length > 2 && (
+                  <span style={{
+                    fontSize: "0.68rem", fontWeight: 600,
+                    background: "#f3f4f6", color: "#6b7280",
+                    padding: "2px 8px", borderRadius: 20,
+                  }}>+{bookingVendorCategories.length - 2}</span>
+                )}
+              </div>
             )}
           </div>
           <div style={{ flexShrink: 0 }}>
@@ -431,11 +540,7 @@ export default function VendorDashboard() {
   useEffect(() => {
     const load = async () => {
       const token = getToken();
-
-      if (!token) {
-        window.location.href = LOGIN_ROUTE;
-        return;
-      }
+      if (!token) { window.location.href = LOGIN_ROUTE; return; }
 
       const cached = getCachedInfo();
       if (cached) setVendor(cached);
@@ -447,10 +552,7 @@ export default function VendorDashboard() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (meRes.status === 401 || meRes.status === 403) {
-          handleLogout();
-          return;
-        }
+        if (meRes.status === 401 || meRes.status === 403) { handleLogout(); return; }
 
         const meData = await meRes.json();
         setVendor(meData.vendor);
@@ -498,6 +600,9 @@ export default function VendorDashboard() {
     cancelled: bookings.filter(b => b.status === "cancelled").length,
   };
 
+  // Parse vendor's own categories for the banner
+  const vendorCategories = parseVendorCategories(vendor);
+
   const profileImg = vendor?.profile_photo
     ? `${SERVER_BASE}/uploads/vendors/${vendor.profile_photo}`
     : null;
@@ -534,53 +639,31 @@ export default function VendorDashboard() {
           animation: vdSpin 0.7s linear infinite;
         }
 
-        /* ── Filter tabs row ── */
         .filter-scroll {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          scrollbar-width: none;
-          padding-bottom: 2px;
+          display: flex; align-items: center; gap: 8px;
+          overflow-x: auto; -webkit-overflow-scrolling: touch;
+          scrollbar-width: none; padding-bottom: 2px;
         }
         .filter-scroll::-webkit-scrollbar { display: none; }
 
         .filter-tab {
-          padding: 7px 14px;
-          border-radius: 9px;
-          border: 1.5px solid #e5e7eb;
-          background: #fff;
-          font-size: 0.8rem;
-          font-weight: 600;
-          color: #6b7280;
-          cursor: pointer;
-          transition: all 0.15s;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          white-space: nowrap;
-          flex-shrink: 0;
+          padding: 7px 14px; border-radius: 9px; border: 1.5px solid #e5e7eb;
+          background: #fff; font-size: 0.8rem; font-weight: 600; color: #6b7280;
+          cursor: pointer; transition: all 0.15s; font-family: 'Plus Jakarta Sans', sans-serif;
+          display: inline-flex; align-items: center; gap: 6px;
+          white-space: nowrap; flex-shrink: 0;
         }
         .filter-tab:hover { border-color: #6366f1; color: #6366f1; }
         .filter-tab.active { background: #6366f1; border-color: #6366f1; color: #fff; }
         .filter-tab.active .tab-count { background: rgba(255,255,255,0.25); color: #fff; }
         .tab-count {
-          font-size: 0.68rem;
-          background: #f3f4f6;
-          color: #6b7280;
-          padding: 1px 6px;
-          border-radius: 20px;
-          font-weight: 700;
+          font-size: 0.68rem; background: #f3f4f6; color: #6b7280;
+          padding: 1px 6px; border-radius: 20px; font-weight: 700;
         }
 
-        /* ── Grids ── */
         .vd-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
-          margin-bottom: 24px;
+          display: grid; grid-template-columns: repeat(4, 1fr);
+          gap: 14px; margin-bottom: 24px;
         }
         .vd-booking-grid {
           display: grid;
@@ -588,114 +671,51 @@ export default function VendorDashboard() {
           gap: 16px;
         }
 
-        /* ── Topbar inner ── */
         .vd-header-inner {
-          height: 60px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
+          height: 60px; display: flex; align-items: center;
+          justify-content: space-between; gap: 12px;
         }
 
-        /* ── Welcome banner ── */
         .vd-banner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: nowrap;
+          display: flex; align-items: center;
+          justify-content: space-between; gap: 16px; flex-wrap: nowrap;
         }
-        .vd-banner-right {
-          text-align: right;
-          flex-shrink: 0;
-        }
+        .vd-banner-right { text-align: right; flex-shrink: 0; }
 
-        /* ── Logout btn ── */
         .vd-logout-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border-radius: 9px;
-          border: 1.5px solid #e5e7eb;
-          background: #fff;
-          color: #374151;
-          font-weight: 600;
-          font-size: 0.8rem;
-          cursor: pointer;
-          font-family: inherit;
-          transition: all 0.15s;
-          white-space: nowrap;
+          display: flex; align-items: center; gap: 6px;
+          padding: 8px 14px; border-radius: 9px; border: 1.5px solid #e5e7eb;
+          background: #fff; color: #374151; font-weight: 600; font-size: 0.8rem;
+          cursor: pointer; font-family: inherit; transition: all 0.15s; white-space: nowrap;
         }
 
-        /* ── Availability badge ── */
         .vd-avail-badge {
-          font-size: 0.72rem;
-          font-weight: 700;
-          padding: 4px 10px;
-          border-radius: 20px;
-          white-space: nowrap;
+          font-size: 0.72rem; font-weight: 700;
+          padding: 4px 10px; border-radius: 20px; white-space: nowrap;
         }
 
-        /* ── TABLET: ≤ 900px ── */
         @media (max-width: 900px) {
-          .vd-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-          }
+          .vd-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
         }
 
-        /* ── MOBILE: ≤ 640px ── */
         @media (max-width: 640px) {
-          .vd-header-inner {
-            height: auto;
-            padding: 10px 0;
-            flex-wrap: nowrap;
-          }
-          .vd-avail-badge {
-            display: none; /* hide on tiny screens to prevent overflow */
-          }
-          .vd-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-          }
-          .vd-booking-grid {
-            grid-template-columns: 1fr;
-          }
-          .vd-banner {
-            flex-direction: column;
-            align-items: flex-start;
-          }
+          .vd-header-inner { height: auto; padding: 10px 0; flex-wrap: nowrap; }
+          .vd-avail-badge  { display: none; }
+          .vd-stats-grid   { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+          .vd-booking-grid { grid-template-columns: 1fr; }
+          .vd-banner       { flex-direction: column; align-items: flex-start; }
           .vd-banner-right {
-            text-align: left;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 4px;
+            text-align: left; width: 100%; display: flex;
+            align-items: center; justify-content: space-between; margin-top: 4px;
           }
-          .vd-banner-right-label {
-            font-size: 0.72rem;
-            color: rgba(255,255,255,0.65);
-          }
-          .vd-banner-right-count {
-            font-size: 2rem !important;
-          }
-          .vd-logout-btn span.vd-logout-text {
-            display: none; /* show icon only on very small screens */
-          }
-          .vd-logout-btn {
-            padding: 8px 10px;
-          }
+          .vd-banner-right-label { font-size: 0.72rem; color: rgba(255,255,255,0.65); }
+          .vd-banner-right-count { font-size: 2rem !important; }
+          .vd-logout-btn span.vd-logout-text { display: none; }
+          .vd-logout-btn { padding: 8px 10px; }
         }
 
-        /* ── X-SMALL: ≤ 400px ── */
         @media (max-width: 400px) {
-          .vd-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-          }
+          .vd-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
         }
       `}</style>
 
@@ -709,7 +729,6 @@ export default function VendorDashboard() {
         }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 16px" }}>
             <div className="vd-header-inner">
-              {/* Logo + Vendor name */}
               <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                 <div style={{
                   width: 34, height: 34, borderRadius: 9,
@@ -729,16 +748,12 @@ export default function VendorDashboard() {
                 </div>
               </div>
 
-              {/* Right side: availability + logout */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                 {vendor && (
-                  <span
-                    className="vd-avail-badge"
-                    style={{
-                      background: vendor.is_available ? "#d1fae5" : "#fee2e2",
-                      color:      vendor.is_available ? "#065f46" : "#991b1b",
-                    }}
-                  >
+                  <span className="vd-avail-badge" style={{
+                    background: vendor.is_available ? "#d1fae5" : "#fee2e2",
+                    color:      vendor.is_available ? "#065f46" : "#991b1b",
+                  }}>
                     {vendor.is_available ? "● Available" : "● Unavailable"}
                   </span>
                 )}
@@ -787,8 +802,11 @@ export default function VendorDashboard() {
                     <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {vendor.name}
                     </div>
-                    <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.75)", marginTop: 2 }}>
-                      {vendor.category_name || "Service Provider"} · {vendor.city}
+                    {/* ── Vendor Categories as chips in banner ── */}
+                    <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <VendorCategoryChips categories={vendorCategories} max={3} light={true} />
+                      <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)" }}>·</span>
+                      <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{vendor.city}</span>
                     </div>
                   </div>
                 </div>
@@ -813,12 +831,10 @@ export default function VendorDashboard() {
             <StatCard label="Cancelled" value={stats.cancelled} accent="#EF4444" icon={Icon.tag} />
           </div>
 
-          {/* ── Filter Tabs (horizontally scrollable) ── */}
+          {/* ── Filter Tabs ── */}
           <div style={{ marginBottom: 18 }}>
             <div className="filter-scroll">
-              <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#9ca3af", flexShrink: 0 }}>
-                Filter:
-              </span>
+              <span style={{ fontSize: "0.76rem", fontWeight: 700, color: "#9ca3af", flexShrink: 0 }}>Filter:</span>
               {FILTERS.map(f => (
                 <button
                   key={f.key}
@@ -834,34 +850,21 @@ export default function VendorDashboard() {
 
           {/* ── Content ── */}
           {loading ? (
-            <div style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", padding: "80px 20px", gap: 16,
-            }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
               <div className="vd-spinner" />
               <p style={{ color: "#9ca3af", fontSize: "0.9rem" }}>Loading your bookings…</p>
             </div>
           ) : error ? (
-            <div style={{
-              textAlign: "center", padding: "60px 20px",
-              background: "#fff", borderRadius: 16, border: "1px solid #fee2e2",
-            }}>
+            <div style={{ textAlign: "center", padding: "60px 20px", background: "#fff", borderRadius: 16, border: "1px solid #fee2e2" }}>
               <div style={{ fontSize: "2rem", marginBottom: 12 }}>⚠️</div>
               <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: 16 }}>{error}</p>
               <button
                 onClick={() => window.location.reload()}
-                style={{
-                  padding: "10px 24px", background: "#6366f1", color: "#fff",
-                  border: "none", borderRadius: 9, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
+                style={{ padding: "10px 24px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >Retry</button>
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{
-              textAlign: "center", padding: "60px 16px",
-              background: "#fff", borderRadius: 16, border: "1px dashed #e5e7eb",
-            }}>
+            <div style={{ textAlign: "center", padding: "60px 16px", background: "#fff", borderRadius: 16, border: "1px dashed #e5e7eb" }}>
               <div style={{ fontSize: "3rem", marginBottom: 14 }}>📋</div>
               <h3 style={{ color: "#374151", fontWeight: 800, marginBottom: 8, fontSize: "1rem" }}>
                 {activeFilter === "all" ? "No Bookings Assigned Yet" : `No ${activeFilter} bookings`}
@@ -874,12 +877,7 @@ export default function VendorDashboard() {
               {activeFilter !== "all" && (
                 <button
                   onClick={() => setActiveFilter("all")}
-                  style={{
-                    marginTop: 16, padding: "9px 20px",
-                    background: "#6366f1", color: "#fff",
-                    border: "none", borderRadius: 9,
-                    fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                  }}
+                  style={{ marginTop: 16, padding: "9px 20px", background: "#6366f1", color: "#fff", border: "none", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                 >View All</button>
               )}
             </div>
@@ -891,11 +889,7 @@ export default function VendorDashboard() {
               </div>
               <div className="vd-booking-grid">
                 {filtered.map(b => (
-                  <BookingCard
-                    key={b.id}
-                    booking={b}
-                    onViewDetail={setSelectedBooking}
-                  />
+                  <BookingCard key={b.id} booking={b} onViewDetail={setSelectedBooking} />
                 ))}
               </div>
             </>
@@ -903,12 +897,8 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      {/* ── Detail Modal (bottom sheet on mobile) ── */}
       {selectedBooking && (
-        <BookingDetailModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
-        />
+        <BookingDetailModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
       )}
     </>
   );

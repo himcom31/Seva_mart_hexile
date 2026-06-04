@@ -7,6 +7,7 @@ import AdminBookings from './Adminbookings.jsx';
 import VendorManagement from './Vendormanagement.jsx';
 import Customermanagement from './Customermanagement.jsx';
 import SubServicePage from './SubServicePage.jsx'
+import Vendorcategories from './Vendorcategories.jsx';
 
 // Import your pages here as you create them
 // import Dashboard from '../../pages/Admin/Dashboard';
@@ -29,6 +30,7 @@ const AdminLayout = () => {
           <Route path="bookings" element={<AdminBookings />} />
           <Route path="vendors" element={<VendorManagement />} />
           <Route path="customers" element={<Customermanagement />} />
+          <Route path="vendor-categories" element={<Vendorcategories />} />
           {/* <Route path="dashboard" element={<Dashboard />} /> */}
 
           {/* Placeholder until pages are built */}
