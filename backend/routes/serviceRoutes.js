@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
-const upload  = require('../middleware/uploadServiceMiddleware.js');
+const upload = require('../config/cloudinary');
+
 const { protect, isAdmin } = require('../middleware/authMiddleware.js');
 const {
   addService,
@@ -19,8 +20,14 @@ router.get('/by-category/:category_id', getServicesByCategory);
 router.get('/:id',                      getServiceById);
 
 // Admin only
-router.post('/',      protect, isAdmin, upload, addService);
-router.put('/:id',    protect, isAdmin, upload, updateService);
+router.post('/',      protect, isAdmin,  upload.fields([
+        { name: 'image',         maxCount: 3 },
+        { name: 'icon',  maxCount: 5 },
+    ]), addService);
+router.put('/:id',    protect, isAdmin,  upload.fields([
+        { name: 'image',         maxCount: 2 },
+        { name: 'icon',  maxCount: 5 },
+    ]), updateService);
 router.delete('/:id', protect, isAdmin,         deleteService);
 
 // Toggle / Verify (Admin)
