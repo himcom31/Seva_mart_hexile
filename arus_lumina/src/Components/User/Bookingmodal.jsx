@@ -196,7 +196,7 @@ function SubServicePicker({ serviceId, selected, onChange, hasError }) {
                       <circle cx="5"  cy="12" r="1"/>
                     </svg>
                   ) : ss.icon ? (
-                    <img src={`${API_BASE1}/uploads/subservices/${ss.icon}`} alt=""
+                    <img src={ss.icon} alt=""
                       className="bk-ss-icon-img" onError={e=>{ e.target.style.display="none"; }}/>
                   ) : (
                     <span className="bk-ss-icon-letter">{ss.name?.charAt(0)?.toUpperCase()}</span>
@@ -265,8 +265,8 @@ export default function BookingModal({ service, onClose }) {
   if (!service) return null;
 
   const imgSrc = service.image
-    ? `${API_BASE1}/uploads/services/${service.image}`
-    : "https://placehold.co/80x80/e2e8f0/94a3b8?text=S";
+  ? service.image
+  : "https://placehold.co/80x80/e2e8f0/94a3b8?text=S";
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
