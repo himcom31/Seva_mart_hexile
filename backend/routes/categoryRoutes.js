@@ -1,6 +1,7 @@
 const express    = require('express');
 const router     = express.Router();
-const upload     = require('../middleware/uploadMiddleware.js');
+const upload  = require('../config/upload');           // ✅ multer middleware
+
 const { protect, isAdmin } = require('../middleware/authMiddleware.js');
 const {
   addCategory,
@@ -15,8 +16,14 @@ router.get('/',    getAllCategories);
 router.get('/:id', getCategoryById);
 
 // Admin only
-router.post('/',    protect, isAdmin, upload, addCategory);
-router.put('/:id',  protect, isAdmin, upload, updateCategory);
+router.post('/',    protect, isAdmin,  upload.fields([
+  { name: 'image', maxCount: 3 },
+  { name: 'icon',  maxCount: 3 },
+]), addCategory);
+router.put('/:id',  protect, isAdmin,  upload.fields([
+  { name: 'image', maxCount: 3 },
+  { name: 'icon',  maxCount: 3 },
+]), updateCategory);
 router.delete('/:id', protect, isAdmin, deleteCategory);
 
 module.exports = router;
