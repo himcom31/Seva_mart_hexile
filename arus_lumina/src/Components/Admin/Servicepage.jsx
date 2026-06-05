@@ -277,15 +277,23 @@ setIconPrev(editItem.icon || null);
 
           {/* MEDIA TAB */}
           {activeTab === "media" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-              <ImageUpload label="Service Image" preview={imagePrev}
-                onChange={(f) => { setImageFile(f); setImagePrev(URL.createObjectURL(f)); }}
-                onRemove={() => { setImageFile(null); setImagePrev(null); }}/>
-              <ImageUpload label="Service Icon" preview={iconPrev}
-                onChange={(f) => { setIconFile(f); setIconPrev(URL.createObjectURL(f)); }}
-                onRemove={() => { setIconFile(null); setIconPrev(null); }}/>
-            </div>
-          )}
+  <div className="flex flex-col gap-4 pt-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <ImageUpload label="Service Image" preview={imagePrev}
+        onChange={(f) => { setImageFile(f); setImagePrev(URL.createObjectURL(f)); }}
+        onRemove={() => { setImageFile(null); setImagePrev(null); }}/>
+      <ImageUpload label="Service Icon" preview={iconPrev}
+        onChange={(f) => { setIconFile(f); setIconPrev(URL.createObjectURL(f)); }}
+        onRemove={() => { setIconFile(null); setIconPrev(null); }}/>
+    </div>
+    <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+      <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <p className="text-xs text-amber-700 font-medium">Maximum file size is <span className="font-bold">5 MB</span> per image. Supported formats: JPG, PNG.</p>
+    </div>
+  </div>
+)}
 
           {/* SETTINGS TAB */}
           {activeTab === "settings" && (

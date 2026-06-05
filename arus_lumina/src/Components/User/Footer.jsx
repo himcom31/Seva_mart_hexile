@@ -179,20 +179,39 @@ export default function Footer() {
 
           {/* Copyright */}
           <p className="text-xs text-gray-400 order-2">
-            © 2026 All rights reserved.{" "}
-            <strong
-              style={{
-                background: "linear-gradient(135deg, #e91e8c, #6c63ff)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                fontWeight: 700,
-              }}
-            >
-              Arus Lumina
-            </strong>
-          </p>
-
+  © 2026 All rights reserved.{" "}
+  <strong
+  style={{
+    backgroundImage: "linear-gradient(135deg, #e91e8c, #6c63ff)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+    fontWeight: 700,
+    display: "inline-block",
+    color: "transparent",        /* ← overrides Tailwind parent color */
+    lineHeight: 1.4,             /* ← prevents gradient from clipping bottom */
+    padding: "0 1px",            /* ← prevents left/right edge clipping */
+  }}
+>
+  Arus Lumina
+</strong>
+  {" "}·{" "}
+  <span className="text-gray-500">
+    Developed & Designed by{" "}
+    <strong
+      style={{
+        backgroundImage: "linear-gradient(135deg, #6c63ff, #00c9a7)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+        fontWeight: 700,
+        display: "inline-block",
+      }}
+    >
+      Hexile Service Pvt. Ltd.
+    </strong>
+  </span>
+</p>
           {/* Legal links */}
           <div className="flex flex-wrap gap-3 sm:gap-4 order-3">
             <Link

@@ -36,6 +36,18 @@ const fmtPrice = (price) => {
 // ── Parse vendor categories from a vendor object ──────────────────────────────
 const getVendorCategories = (vendor) => {
   if (!vendor) return [];
+
+  // ── Priority 1: vendorCategories array of {id, name, slug} objects (our backend shape)
+  if (Array.isArray(vendor.vendorCategories) && vendor.vendorCategories.length > 0) {
+    return vendor.vendorCategories.map(c => (typeof c === "string" ? c : c.name)).filter(Boolean);
+  }
+
+  // ── Priority 2: vendor_categories (snake_case variant)
+  if (Array.isArray(vendor.vendor_categories) && vendor.vendor_categories.length > 0) {
+    return vendor.vendor_categories.map(c => (typeof c === "string" ? c : c.name)).filter(Boolean);
+  }
+
+  // ── Priority 3: vendor_category_names as JSON string
   if (vendor.vendor_category_names) {
     try {
       const parsed = typeof vendor.vendor_category_names === "string"
@@ -44,11 +56,11 @@ const getVendorCategories = (vendor) => {
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     } catch { /* fall through */ }
   }
-  if (Array.isArray(vendor.vendor_categories) && vendor.vendor_categories.length > 0) {
-    return vendor.vendor_categories.map(c => (typeof c === "string" ? c : c.name)).filter(Boolean);
-  }
-  if (vendor.category) return [vendor.category];
+
+  // ── Priority 4: single category fallbacks
   if (vendor.category_name) return [vendor.category_name];
+  if (vendor.category)      return [vendor.category];
+
   return [];
 };
 
@@ -107,15 +119,22 @@ function VendorAssignPanel({
 
   // Collect unique categories: prefer the full list from API, fall back to vendor data
   const allCategories = useMemo(() => {
-    if (vendorCategories && vendorCategories.length > 0) {
-      return vendorCategories.map(c => (typeof c === "string" ? c : c.name)).filter(Boolean);
-    }
-    const set = new Set();
-    vendors.forEach(v => {
-      getVendorCategories(v).forEach(cat => set.add(cat));
-    });
-    return Array.from(set).sort();
-  }, [vendors, vendorCategories]);
+  // Always derive from actual vendor data so only categories with vendors show
+  const set = new Set();
+  vendors.forEach(v => {
+    getVendorCategories(v).forEach(cat => set.add(cat));
+  });
+  const fromVendors = Array.from(set).sort();
+
+  // If vendor data has no categories yet, fall back to the full API list
+  if (fromVendors.length > 0) return fromVendors;
+
+  if (vendorCategories && vendorCategories.length > 0) {
+    return vendorCategories.map(c => (typeof c === "string" ? c : c.name)).filter(Boolean);
+  }
+
+  return [];
+}, [vendors, vendorCategories]);
 
   // Filter by active category then by search
   const filteredVendors = useMemo(() => {
@@ -201,9 +220,9 @@ function VendorAssignPanel({
             <style>{`.vcpanel-cats::-webkit-scrollbar { display: none; }`}</style>
             {[{ key: "__all__", label: "All" }, ...allCategories.map(c => ({ key: c, label: c }))].map(({ key, label }) => {
               const isActive = activeCategory === key;
-              const count = key === "__all__"
-                ? vendors.length
-                : vendors.filter(v => getVendorCategories(v).includes(key)).length;
+              const count = key === "__all__"    // ← THIS LINE
+          ? vendors.length
+          : vendors.filter(v => getVendorCategories(v).includes(key)).length;
               return (
                 <button
                   key={key}
