@@ -10,6 +10,10 @@ import UserFooter from './Components/User/Footer.jsx';
 import HomePage from './pages/User/HomePages.jsx';
 import UserLoginPage from './pages/User/UserLogin.jsx';
 import VendorDashboard from './pages/User/Vendordashboard.jsx';
+import CustomerLogin from './Components/User/CustomerLogin.jsx';   // ← NEW
+import CustomerDashboard from "./Components/User/Customerdashboard.jsx";
+
+
 
 const ProtectedRouteAdmin = ({ children }) => {
   const token = localStorage.getItem('al_token');
@@ -43,7 +47,7 @@ function App() {
         <Routes>
 
           {/* Root → user home */}
-          <Route path="/" element={<Navigate to="/user/home" replace />} />
+          <Route path="/" element={<HomePage />} />
 
           {/* Admin login */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -60,7 +64,14 @@ function App() {
 
           {/* Public user routes */}
           <Route path="/user/login" element={<UserLoginPage />} />
-          <Route path="/user/home" element={<HomePage />} />
+
+
+          {/* Customer order tracking — no auth needed, just mobile number */}
+          <Route path="/user/customer/login" element={<CustomerLogin />} />
+          <Route path="/user/customer/dashboard" element={<CustomerDashboard />} />
+
+
+
 
           {/* Vendor Dashboard — own top-level route, outside UserLayout */}
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />

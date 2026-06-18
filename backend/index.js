@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
 
-// Initializes SQLite and creates tables
+// MySQL pool init aur tables create karta hai
 require('./config/db');
 
 const app = express();
@@ -26,10 +26,6 @@ app.use('/api/vendors', require('./routes/vendorRoutes.js'));
 app.use('/api/users',    require('./routes/userRoutes.js'));
 app.use('/api/book', require('./routes/bookRoutes.js'));
 app.use('/api/vendor-categories', require('./routes/Vendorcategoryroutes.js'));
-
-
-
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));

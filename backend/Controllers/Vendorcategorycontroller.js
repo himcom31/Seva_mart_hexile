@@ -7,7 +7,7 @@ const generateSlug = (name) =>
 const isValidId = (id) => /^\d+$/.test(id);
 
 // ─── Create ───────────────────────────────────────────────────────────────────
-exports.createCategory = (req, res) => {
+exports.createCategory = async (req, res) => {
   try {
     const { name, description, icon } = req.body;
 
@@ -16,11 +16,11 @@ exports.createCategory = (req, res) => {
 
     const slug = generateSlug(name);
 
-    const existing = VendorCategory.getBySlug(slug);
+    const existing = await VendorCategory.getBySlug(slug);
     if (existing)
       return res.status(409).json({ success: false, message: 'A category with this name already exists.' });
 
-    const category = VendorCategory.create({ name: name.trim(), slug, description, icon });
+    const category = await VendorCategory.create({ name: name.trim(), slug, description, icon });
     return res.status(201).json({ success: true, message: 'Category created.', data: category });
 
   } catch (err) {
@@ -30,9 +30,9 @@ exports.createCategory = (req, res) => {
 };
 
 // ─── Get All ──────────────────────────────────────────────────────────────────
-exports.getAllCategories = (req, res) => {
+exports.getAllCategories = async (req, res) => {
   try {
-    const categories = VendorCategory.getAll();
+    const categories = await VendorCategory.getAll();
     return res.status(200).json({ success: true, count: categories.length, data: categories });
   } catch (err) {
     console.error('getAllCategories:', err.message);
@@ -41,13 +41,13 @@ exports.getAllCategories = (req, res) => {
 };
 
 // ─── Get By ID ────────────────────────────────────────────────────────────────
-exports.getCategoryById = (req, res) => {
+exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id))
       return res.status(400).json({ success: false, message: 'Invalid ID.' });
 
-    const category = VendorCategory.getById(id);
+    const category = await VendorCategory.getById(id);
     if (!category)
       return res.status(404).json({ success: false, message: 'Category not found.' });
 
@@ -59,10 +59,10 @@ exports.getCategoryById = (req, res) => {
 };
 
 // ─── Get By Slug ──────────────────────────────────────────────────────────────
-exports.getCategoryBySlug = (req, res) => {
+exports.getCategoryBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    const category = VendorCategory.getBySlug(slug);
+    const category = await VendorCategory.getBySlug(slug);
     if (!category)
       return res.status(404).json({ success: false, message: 'Category not found.' });
 
@@ -74,7 +74,7 @@ exports.getCategoryBySlug = (req, res) => {
 };
 
 // ─── Update ───────────────────────────────────────────────────────────────────
-exports.updateCategory = (req, res) => {
+exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id))
@@ -84,18 +84,18 @@ exports.updateCategory = (req, res) => {
     if (!name || !name.trim())
       return res.status(400).json({ success: false, message: 'Category name is required.' });
 
-    const existing = VendorCategory.getById(id);
+    const existing = await VendorCategory.getById(id);
     if (!existing)
       return res.status(404).json({ success: false, message: 'Category not found.' });
 
     const slug = generateSlug(name);
 
     // Check slug conflict with a DIFFERENT category
-    const slugConflict = VendorCategory.getBySlug(slug);
+    const slugConflict = await VendorCategory.getBySlug(slug);
     if (slugConflict && slugConflict.id !== Number(id))
       return res.status(409).json({ success: false, message: 'A category with this name already exists.' });
 
-    VendorCategory.update(id, { name: name.trim(), slug, description, icon, is_active });
+    await VendorCategory.update(id, { name: name.trim(), slug, description, icon, is_active });
     return res.status(200).json({
       success: true,
       message: 'Category updated.',
@@ -109,17 +109,17 @@ exports.updateCategory = (req, res) => {
 };
 
 // ─── Soft Delete (Deactivate) ─────────────────────────────────────────────────
-exports.deactivateCategory = (req, res) => {
+exports.deactivateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id))
       return res.status(400).json({ success: false, message: 'Invalid ID.' });
 
-    const existing = VendorCategory.getById(id);
+    const existing = await VendorCategory.getById(id);
     if (!existing)
       return res.status(404).json({ success: false, message: 'Category not found.' });
 
-    VendorCategory.softDelete(id);
+    await VendorCategory.softDelete(id);
     return res.status(200).json({ success: true, message: 'Category deactivated.' });
 
   } catch (err) {
@@ -129,17 +129,17 @@ exports.deactivateCategory = (req, res) => {
 };
 
 // ─── Hard Delete ──────────────────────────────────────────────────────────────
-exports.deleteCategory = (req, res) => {
+exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     if (!isValidId(id))
       return res.status(400).json({ success: false, message: 'Invalid ID.' });
 
-    const existing = VendorCategory.getById(id);
+    const existing = await VendorCategory.getById(id);
     if (!existing)
       return res.status(404).json({ success: false, message: 'Category not found.' });
 
-    VendorCategory.delete(id);
+    await VendorCategory.delete(id);
     return res.status(200).json({ success: true, message: 'Category deleted.' });
 
   } catch (err) {

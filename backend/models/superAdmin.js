@@ -1,26 +1,30 @@
-const db = require('../config/db');
+const pool = require('../config/db');
 
 const Admin = {
-  findOne: ({ email, role } = {}) => {
+  findOne: async ({ email, role } = {}) => {
     let query = 'SELECT * FROM admins WHERE 1=1';
     const params = [];
 
     if (email !== undefined) { query += ' AND email = ?'; params.push(email); }
     if (role  !== undefined) { query += ' AND role = ?';  params.push(role);  }
 
-    return db.prepare(query).get(...params) || null;
+    const [rows] = await pool.query(query, params);
+    return rows[0] || null;
   },
 
-  findById: (id) => {
-    return db.prepare('SELECT id, name, email, role, mobile FROM admins WHERE id = ?').get(id) || null;
-  },
-
-  create: ({ name, email, password, role = 'admin', mobile }) => {
-    const stmt = db.prepare(
-      'INSERT INTO admins (name, email, password, role, mobile) VALUES (?, ?, ?, ?, ?)'
+  findById: async (id) => {
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, mobile FROM admins WHERE id = ?', [id]
     );
-    const result = stmt.run(name, email, password, role, mobile ?? null);
-    return { id: result.lastInsertRowid, name, email, role, mobile };
+    return rows[0] || null;
+  },
+
+  create: async ({ name, email, password, role = 'admin', mobile }) => {
+    const [result] = await pool.query(
+      'INSERT INTO admins (name, email, password, role, mobile) VALUES (?, ?, ?, ?, ?)',
+      [name, email, password, role, mobile ?? null]
+    );
+    return { id: result.insertId, name, email, role, mobile };
   }
 };
 

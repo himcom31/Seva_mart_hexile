@@ -2,10 +2,10 @@ const User    = require('../models/User.js');
 const Booking = require('../models/Book.js');
 
 // ─── Get All Users (Admin) ────────────────────────────────────────────────────
-exports.getAllUsers = (req, res) => {
+exports.getAllUsers = async (req, res) => {
   try {
     const { is_active, is_blocked, city } = req.query;
-    const users = User.findAll({
+    const users = await User.findAll({
       is_active:  is_active  !== undefined ? parseInt(is_active)  : undefined,
       is_blocked: is_blocked !== undefined ? parseInt(is_blocked) : undefined,
       city
@@ -17,12 +17,12 @@ exports.getAllUsers = (req, res) => {
 };
 
 // ─── Get Single User + Booking History (Admin) ────────────────────────────────
-exports.getUserById = (req, res) => {
+exports.getUserById = async (req, res) => {
   try {
-    const user = User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const bookings = Booking.findByUser(req.params.id);
+    const bookings = await Booking.findByUser(req.params.id);
     res.status(200).json({ success: true, user, bookings });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -30,13 +30,13 @@ exports.getUserById = (req, res) => {
 };
 
 // ─── Update User (Admin) ──────────────────────────────────────────────────────
-exports.updateUser = (req, res) => {
+exports.updateUser = async (req, res) => {
   try {
-    const user = User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const { full_name, email, address, landmark, city } = req.body;
-    const updated = User.update(req.params.id, {
+    const updated = await User.update(req.params.id, {
       full_name: full_name || user.full_name,
       email:     email     ?? user.email,
       address:   address   ?? user.address,
@@ -50,12 +50,12 @@ exports.updateUser = (req, res) => {
 };
 
 // ─── Block / Unblock User (Admin) ─────────────────────────────────────────────
-exports.toggleBlock = (req, res) => {
+exports.toggleBlock = async (req, res) => {
   try {
-    const user = User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const updated = User.toggleBlock(req.params.id);
+    const updated = await User.toggleBlock(req.params.id);
     res.status(200).json({
       success: true,
       message: `User ${updated.is_blocked ? 'blocked' : 'unblocked'}`,
@@ -67,11 +67,11 @@ exports.toggleBlock = (req, res) => {
 };
 
 // ─── Delete User (Admin) ──────────────────────────────────────────────────────
-exports.deleteUser = (req, res) => {
+exports.deleteUser = async (req, res) => {
   try {
-    const user = User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    User.delete(req.params.id);
+    await User.delete(req.params.id);
     res.status(200).json({ success: true, message: 'User deleted' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });

@@ -1,90 +1,85 @@
-const db = require('../../config/db');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS sub_services (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    service_id  INTEGER NOT NULL,
-    name        TEXT NOT NULL,
-    slug        TEXT NOT NULL UNIQUE,
-    image       TEXT,
-    icon        TEXT,
-    description TEXT,
-    price       REAL,
-    status      TEXT NOT NULL DEFAULT 'active',
-    featured    INTEGER NOT NULL DEFAULT 0,
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE
-  );
-`);
+const pool = require('../../config/db');
 
 const SubService = {
-  create: ({ service_id, name, slug, image, icon, description, price, status, featured }) => {
-    const stmt = db.prepare(`
-      INSERT INTO sub_services (service_id, name, slug, image, icon, description, price, status, featured)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(
-      service_id, name, slug,
-      image       ?? null,
-      icon        ?? null,
-      description ?? null,
-      price       ?? null,
-      status      ?? 'active',
-      featured ? 1 : 0
+  create: async ({ service_id, name, slug, image, icon, description, price, status, featured }) => {
+    const [result] = await pool.query(
+      `INSERT INTO sub_services (service_id, name, slug, image, icon, description, price, status, featured)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        service_id, name, slug,
+        image       ?? null,
+        icon        ?? null,
+        description ?? null,
+        price       ?? null,
+        status      ?? 'active',
+        featured ? 1 : 0
+      ]
     );
-    return SubService.findById(result.lastInsertRowid);
+    return SubService.findById(result.insertId);
   },
 
-  findById: (id) =>
-    db.prepare(`
+  findById: async (id) => {
+    const [rows] = await pool.query(`
       SELECT ss.*, s.name AS service_name, c.name AS category_name
       FROM sub_services ss
       LEFT JOIN services  s ON ss.service_id = s.id
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE ss.id = ?
-    `).get(id) || null,
+    `, [id]);
+    return rows[0] || null;
+  },
 
-  findBySlug: (slug) =>
-    db.prepare('SELECT * FROM sub_services WHERE slug = ?').get(slug) || null,
+  findBySlug: async (slug) => {
+    const [rows] = await pool.query('SELECT * FROM sub_services WHERE slug = ?', [slug]);
+    return rows[0] || null;
+  },
 
-  findAll: () =>
-    db.prepare(`
+  findAll: async () => {
+    const [rows] = await pool.query(`
       SELECT ss.*, s.name AS service_name, c.name AS category_name
       FROM sub_services ss
       LEFT JOIN services  s ON ss.service_id = s.id
       LEFT JOIN categories c ON s.category_id = c.id
       ORDER BY ss.created_at DESC
-    `).all(),
+    `);
+    return rows;
+  },
 
-  findByServiceId: (service_id) =>
-    db.prepare(`
+  findByServiceId: async (service_id) => {
+    const [rows] = await pool.query(`
       SELECT ss.*, s.name AS service_name, c.name AS category_name
       FROM sub_services ss
       LEFT JOIN services  s ON ss.service_id = s.id
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE ss.service_id = ?
       ORDER BY ss.created_at DESC
-    `).all(service_id),
+    `, [service_id]);
+    return rows;
+  },
 
-  findByCategoryId: (category_id) =>
-    db.prepare(`
+  findByCategoryId: async (category_id) => {
+    const [rows] = await pool.query(`
       SELECT ss.*, s.name AS service_name, c.name AS category_name
       FROM sub_services ss
       LEFT JOIN services  s ON ss.service_id = s.id
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE s.category_id = ?
       ORDER BY ss.created_at DESC
-    `).all(category_id),
+    `, [category_id]);
+    return rows;
+  },
 
-  update: (id, fields) => {
+  update: async (id, fields) => {
     const keys      = Object.keys(fields);
     const setClause = keys.map(k => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE sub_services SET ${setClause} WHERE id = ?`).run(...Object.values(fields), id);
+    await pool.query(`UPDATE sub_services SET ${setClause} WHERE id = ?`, [...Object.values(fields), id]);
     return SubService.findById(id);
   },
 
-  delete: (id) =>
-    db.prepare('DELETE FROM sub_services WHERE id = ?').run(id),
+  delete: async (id) => {
+    const [result] = await pool.query('DELETE FROM sub_services WHERE id = ?', [id]);
+    return result;
+  },
 };
 
 module.exports = SubService;

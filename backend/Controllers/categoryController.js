@@ -24,7 +24,7 @@ exports.addCategory = async (req, res) => {
 
     const finalSlug = slug || generateSlug(name);
 
-    const existing = Category.findBySlug(finalSlug);
+    const existing = await Category.findBySlug(finalSlug);
     if (existing)
       return res.status(409).json({ message: `Slug "${finalSlug}" already exists.` });
 
@@ -32,7 +32,7 @@ exports.addCategory = async (req, res) => {
     const image = req.files?.image?.[0]?.path || null;
     const icon  = req.files?.icon?.[0]?.path  || null;
 
-    const category = Category.create({
+    const category = await Category.create({
       language: language || 'en',
       name,
       slug: finalSlug,
@@ -53,9 +53,9 @@ exports.addCategory = async (req, res) => {
 // @desc   Get All Categories
 // @route  GET /api/categories
 // @access Public
-exports.getAllCategories = (req, res) => {
+exports.getAllCategories = async (req, res) => {
   try {
-    const categories = Category.findAll();
+    const categories = await Category.findAll();
     res.status(200).json({ success: true, count: categories.length, categories });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -65,9 +65,9 @@ exports.getAllCategories = (req, res) => {
 // @desc   Get Single Category
 // @route  GET /api/categories/:id
 // @access Public
-exports.getCategoryById = (req, res) => {
+exports.getCategoryById = async (req, res) => {
   try {
-    const category = Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ message: 'Category not found' });
     res.status(200).json({ success: true, category });
   } catch (err) {
@@ -80,7 +80,7 @@ exports.getCategoryById = (req, res) => {
 // @access Private (Admin)
 exports.updateCategory = async (req, res) => {
   try {
-    const category = Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ message: 'Category not found' });
 
     const { language, name, slug, description, status, featured } = req.body;
@@ -101,7 +101,7 @@ exports.updateCategory = async (req, res) => {
       icon = req.files.icon[0].path;
     }
 
-    const updated = Category.update(req.params.id, {
+    const updated = await Category.update(req.params.id, {
       language: language || category.language,
       name:     name     || category.name,
       slug:     slug     || category.slug,
@@ -123,7 +123,7 @@ exports.updateCategory = async (req, res) => {
 // @access Private (Admin)
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = Category.findById(req.params.id);
+    const category = await Category.findById(req.params.id);
     if (!category) return res.status(404).json({ message: 'Category not found' });
 
     // Delete both image and icon from Cloudinary
@@ -132,7 +132,7 @@ exports.deleteCategory = async (req, res) => {
       if (publicId) await cloudinary.uploader.destroy(publicId);
     }
 
-    Category.delete(req.params.id);
+    await Category.delete(req.params.id);
     res.status(200).json({ success: true, message: 'Category deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });

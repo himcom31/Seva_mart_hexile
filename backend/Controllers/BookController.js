@@ -15,7 +15,7 @@ const isValidFutureDate = (dateStr) => {
 // @desc   Create Booking
 // @route  POST /api/bookings
 // @access Public
-exports.createBooking = (req, res) => {
+exports.createBooking = async (req, res) => {
   try {
     const {
       service_id, full_name, mobile, address,
@@ -51,10 +51,10 @@ exports.createBooking = (req, res) => {
     }
 
     // ── Fetch service details ─────────────────────────────────────────────────
-    const service = Service.findById(service_id);
+    const service = await Service.findById(service_id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
-    const booking = Booking.create({
+    const booking = await Booking.create({
       service_id,
       service_name:         service.name,
       category_name:        service.category_name || null,
@@ -80,10 +80,10 @@ exports.createBooking = (req, res) => {
 // @desc   Get All Bookings (Admin)
 // @route  GET /api/bookings
 // @access Private (Admin)
-exports.getAllBookings = (req, res) => {
+exports.getAllBookings = async (req, res) => {
   try {
     const { status } = req.query;
-    const bookings = status ? Booking.findByStatus(status) : Booking.findAll();
+    const bookings = status ? await Booking.findByStatus(status) : await Booking.findAll();
 
     // Parse selected_sub_services JSON string → array for each booking
     const enriched = bookings.map(b => ({
@@ -102,9 +102,9 @@ exports.getAllBookings = (req, res) => {
 // @desc   Get Booking Stats (Admin)
 // @route  GET /api/bookings/stats
 // @access Private (Admin)
-exports.getBookingStats = (req, res) => {
+exports.getBookingStats = async (req, res) => {
   try {
-    const stats = Booking.getStats();
+    const stats = await Booking.getStats();
     res.status(200).json({ success: true, stats });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -114,9 +114,9 @@ exports.getBookingStats = (req, res) => {
 // @desc   Get Single Booking
 // @route  GET /api/bookings/:id
 // @access Private (Admin)
-exports.getBookingById = (req, res) => {
+exports.getBookingById = async (req, res) => {
   try {
-    const booking = Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     // Parse sub-services for convenience
@@ -133,9 +133,10 @@ exports.getBookingById = (req, res) => {
 // @desc   Get Bookings by Service (Admin)
 // @route  GET /api/bookings/service/:service_id
 // @access Private (Admin)
-exports.getBookingsByService = (req, res) => {
+exports.getBookingsByService = async (req, res) => {
   try {
-    const bookings = Booking.findByServiceId(req.params.service_id).map(b => ({
+    const rows = await Booking.findByServiceId(req.params.service_id);
+    const bookings = rows.map(b => ({
       ...b,
       selected_sub_services: b.selected_sub_services
         ? (() => { try { return JSON.parse(b.selected_sub_services); } catch { return []; } })()
@@ -150,16 +151,16 @@ exports.getBookingsByService = (req, res) => {
 // @desc   Update Booking Status (Admin)
 // @route  PATCH /api/bookings/:id/status
 // @access Private (Admin)
-exports.updateBookingStatus = (req, res) => {
+exports.updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
     if (!VALID_STATUSES.includes(status)) {
       return res.status(400).json({ message: `status must be one of: ${VALID_STATUSES.join(', ')}` });
     }
-    const booking = Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-    const updated = Booking.updateStatus(req.params.id, status);
+    const updated = await Booking.updateStatus(req.params.id, status);
     res.status(200).json({ success: true, message: `Booking status updated to ${status}`, booking: updated });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -169,9 +170,9 @@ exports.updateBookingStatus = (req, res) => {
 // @desc   Update Booking Details (Admin)
 // @route  PUT /api/bookings/:id
 // @access Private (Admin)
-exports.updateBooking = (req, res) => {
+exports.updateBooking = async (req, res) => {
   try {
-    const booking = Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     const {
@@ -210,7 +211,7 @@ exports.updateBooking = (req, res) => {
         : null;
     }
 
-    const updated = Booking.update(req.params.id, fields);
+    const updated = await Booking.update(req.params.id, fields);
     res.status(200).json({ success: true, message: 'Booking updated', booking: updated });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -220,7 +221,7 @@ exports.updateBooking = (req, res) => {
 // @desc   Assign Vendor to Booking (Admin)
 // @route  PATCH /api/bookings/:id/assign-vendor
 // @access Private (Admin)
-exports.assignVendor = (req, res) => {
+exports.assignVendor = async (req, res) => {
   try {
     const { vendor_id, vendor_name } = req.body;
 
@@ -232,10 +233,10 @@ exports.assignVendor = (req, res) => {
       return res.status(400).json({ message: 'Provide both vendor_id and vendor_name to assign, or omit both to remove' });
     }
 
-    const booking = Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-    const updated = Booking.update(req.params.id, {
+    const updated = await Booking.update(req.params.id, {
       vendor_id:   vendor_id   || null,
       vendor_name: vendor_name || null,
     });
@@ -253,11 +254,11 @@ exports.assignVendor = (req, res) => {
 // @desc   Delete Booking (Admin)
 // @route  DELETE /api/bookings/:id
 // @access Private (Admin)
-exports.deleteBooking = (req, res) => {
+exports.deleteBooking = async (req, res) => {
   try {
-    const booking = Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
-    Booking.delete(req.params.id);
+    await Booking.delete(req.params.id);
     res.status(200).json({ success: true, message: 'Booking deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -265,19 +266,57 @@ exports.deleteBooking = (req, res) => {
 };
 
 
-exports.getMyBookings = (req, res) => {
+exports.getMyBookings = async (req, res) => {
   try {
     const vendor_id = req.vendor.id;   // set by protectVendor middleware
-    const bookings  = Booking.findByVendorId(vendor_id);
- 
+    const bookings  = await Booking.findByVendorId(vendor_id);
+
     const enriched = bookings.map(b => ({
       ...b,
       selected_sub_services: b.selected_sub_services
         ? (() => { try { return JSON.parse(b.selected_sub_services); } catch { return []; } })()
         : []
     }));
- 
+
     res.status(200).json({ success: true, count: enriched.length, bookings: enriched });
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error', error: err.message });
+  }
+};
+
+
+
+exports.getBookingsByMobile = async (req, res) => {
+  try {
+    const { mobile } = req.params;
+
+    // Basic mobile validation
+    const cleanMobile = mobile.replace(/\D/g, '');
+    if (cleanMobile.length < 10) {
+      return res.status(400).json({ message: 'Invalid mobile number' });
+    }
+
+    const bookings = await Booking.findByMobile(cleanMobile);
+
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({
+        message: 'No bookings found for this mobile number'
+      });
+    }
+
+    // Parse selected_sub_services for each booking
+    const enriched = bookings.map(b => ({
+      ...b,
+      selected_sub_services: b.selected_sub_services
+        ? (() => { try { return JSON.parse(b.selected_sub_services); } catch { return []; } })()
+        : []
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: enriched.length,
+      bookings: enriched
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }

@@ -1,66 +1,6 @@
 // models/Vendor.js
-const db   = require('../config/db');
+const pool   = require('../config/db');
 const bcrypt = require('bcryptjs');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS vendors (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    mobile TEXT NOT NULL UNIQUE,
-    aadhaar TEXT NOT NULL UNIQUE,
-    email TEXT UNIQUE,
-    password TEXT,                          -- hashed password
-    experience INTEGER DEFAULT 0,
-    category_id INTEGER,
-    subcategory_id INTEGER,
-    city TEXT NOT NULL,
-    address TEXT,
-    profile_photo TEXT,
-    aadhaar_front TEXT,
-    aadhaar_back TEXT,
-    certificate TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    verify_status TEXT NOT NULL DEFAULT 'pending',
-    is_available INTEGER NOT NULL DEFAULT 1,
-    vendor_type TEXT NOT NULL DEFAULT 'individual',
-    rating REAL DEFAULT 0,
-    total_jobs INTEGER DEFAULT 0,
-    completed_jobs INTEGER DEFAULT 0,
-    cancelled_jobs INTEGER DEFAULT 0,
-    avg_response_time REAL DEFAULT 0,
-    notes TEXT,
-    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS vendor_services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vendor_id INTEGER NOT NULL,
-    service_id INTEGER NOT NULL,
-    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE,
-    FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE,
-    UNIQUE(vendor_id, service_id)
-  );
-
-  CREATE TABLE IF NOT EXISTS vendor_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vendor_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'present',
-    note TEXT,
-    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE,
-    UNIQUE(vendor_id, date)
-  );
-
-  CREATE TABLE IF NOT EXISTS vendor_category_map (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  vendor_id INTEGER NOT NULL,
-  vendor_category_id INTEGER NOT NULL,
-  FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE,
-  FOREIGN KEY (vendor_category_id) REFERENCES vendor_categories(id) ON DELETE CASCADE,
-  UNIQUE(vendor_id, vendor_category_id)
-);
-`);
 
 const Vendor = {
 
@@ -79,53 +19,65 @@ const Vendor = {
 
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
-  create: ({ name, mobile, aadhaar, email, password,
+  create: async ({ name, mobile, aadhaar, email, password,
              experience, category_id, subcategory_id,
              city, address, profile_photo, aadhaar_front,
              aadhaar_back, certificate, vendor_type, notes }) => {
 
     const hashed = password ? Vendor.hashPassword(password) : null;
 
-    const stmt = db.prepare(`
-      INSERT INTO vendors
+    const [result] = await pool.query(
+      `INSERT INTO vendors
         (name, mobile, aadhaar, email, password, experience, category_id,
          subcategory_id, city, address, profile_photo, aadhaar_front,
          aadhaar_back, certificate, vendor_type, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
-      name, mobile, aadhaar, email ?? null, hashed,
-      experience ?? 0, category_id ?? null, subcategory_id ?? null,
-      city, address ?? null, profile_photo ?? null,
-      aadhaar_front ?? null, aadhaar_back ?? null, certificate ?? null,
-      vendor_type ?? 'individual', notes ?? null
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name, mobile, aadhaar, email ?? null, hashed,
+        experience ?? 0, category_id ?? null, subcategory_id ?? null,
+        city, address ?? null, profile_photo ?? null,
+        aadhaar_front ?? null, aadhaar_back ?? null, certificate ?? null,
+        vendor_type ?? 'individual', notes ?? null
+      ]
     );
 
-    return Vendor._safe(Vendor.findByIdRaw(result.lastInsertRowid));
+    const raw = await Vendor.findByIdRaw(result.insertId);
+    return Vendor._safe(raw);
   },
 
   // Returns row WITH password (for auth checks only — never send to client)
-  findByIdRaw: (id) => {
-    return db.prepare(`
+  findByIdRaw: async (id) => {
+    const [rows] = await pool.query(`
       SELECT v.*, c.name as category_name
       FROM vendors v
       LEFT JOIN categories c ON v.category_id = c.id
       WHERE v.id = ?
-    `).get(id) || null;
+    `, [id]);
+    return rows[0] || null;
   },
 
-  findById: (id) => Vendor._safe(Vendor.findByIdRaw(id)),
+  findById: async (id) => Vendor._safe(await Vendor.findByIdRaw(id)),
 
-  findByMobileRaw:  (mobile)  => db.prepare('SELECT * FROM vendors WHERE mobile = ?').get(mobile)  || null,
-  findByEmailRaw:   (email)   => db.prepare('SELECT * FROM vendors WHERE email = ?').get(email)    || null,
-  findByAadhaar:    (aadhaar) => db.prepare('SELECT * FROM vendors WHERE aadhaar = ?').get(aadhaar) || null,
+  findByMobileRaw: async (mobile) => {
+    const [rows] = await pool.query('SELECT * FROM vendors WHERE mobile = ?', [mobile]);
+    return rows[0] || null;
+  },
 
-  findByMobile: (mobile) => Vendor._safe(Vendor.findByMobileRaw(mobile)),
-  findByEmail:  (email)  => Vendor._safe(Vendor.findByEmailRaw(email)),
+  findByEmailRaw: async (email) => {
+    const [rows] = await pool.query('SELECT * FROM vendors WHERE email = ?', [email]);
+    return rows[0] || null;
+  },
 
-  findAll: ({ status, city, category_id, verify_status } = {}) => {
-    let q = `SELECT v.id, v.name, v.mobile, v.email, v.experience,v.aadhaar,
+  findByAadhaar: async (aadhaar) => {
+    const [rows] = await pool.query('SELECT * FROM vendors WHERE aadhaar = ?', [aadhaar]);
+    return rows[0] || null;
+  },
+
+  findByMobile: async (mobile) => Vendor._safe(await Vendor.findByMobileRaw(mobile)),
+  findByEmail:  async (email)  => Vendor._safe(await Vendor.findByEmailRaw(email)),
+
+  findAll: async ({ status, city, category_id, verify_status } = {}) => {
+    let q = `SELECT v.id, v.name, v.mobile, v.email, v.experience, v.aadhaar,
                     v.category_id, v.subcategory_id, v.city, v.address,
                     v.profile_photo, v.status, v.verify_status, v.is_available,
                     v.vendor_type, v.rating, v.total_jobs, v.completed_jobs,
@@ -140,113 +92,137 @@ const Vendor = {
     if (category_id)   { q += ' AND v.category_id = ?';   params.push(category_id); }
     if (verify_status) { q += ' AND v.verify_status = ?'; params.push(verify_status); }
     q += ' ORDER BY v.registered_at DESC';
-    return db.prepare(q).all(...params);   // password never selected
+    const [rows] = await pool.query(q, params);   // password never selected
+    return rows;
   },
 
-  update: (id, fields) => {
+  update: async (id, fields) => {
     // Never allow direct password update via this method
     const { password, ...rest } = fields;
     if (!Object.keys(rest).length) return Vendor.findById(id);
     const setClause = Object.keys(rest).map(k => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE vendors SET ${setClause} WHERE id = ?`).run(...Object.values(rest), id);
+    await pool.query(`UPDATE vendors SET ${setClause} WHERE id = ?`, [...Object.values(rest), id]);
     return Vendor.findById(id);
   },
 
   // Dedicated safe password change
-  updatePassword: (id, newPlain) => {
+  updatePassword: async (id, newPlain) => {
     const hashed = Vendor.hashPassword(newPlain);
-    db.prepare('UPDATE vendors SET password = ? WHERE id = ?').run(hashed, id);
+    await pool.query('UPDATE vendors SET password = ? WHERE id = ?', [hashed, id]);
   },
 
-  updateStatus: (id, status) => {
-    db.prepare('UPDATE vendors SET status = ? WHERE id = ?').run(status, id);
+  updateStatus: async (id, status) => {
+    await pool.query('UPDATE vendors SET status = ? WHERE id = ?', [status, id]);
     return Vendor.findById(id);
   },
 
-  updateVerifyStatus: (id, verify_status) => {
-    db.prepare('UPDATE vendors SET verify_status = ? WHERE id = ?').run(verify_status, id);
+  updateVerifyStatus: async (id, verify_status) => {
+    await pool.query('UPDATE vendors SET verify_status = ? WHERE id = ?', [verify_status, id]);
     return Vendor.findById(id);
   },
 
-  toggleAvailability: (id) => {
-    const vendor = Vendor.findByIdRaw(id);
+  toggleAvailability: async (id) => {
+    const vendor = await Vendor.findByIdRaw(id);
     if (!vendor) return null;
     const newVal = vendor.is_available ? 0 : 1;
-    db.prepare('UPDATE vendors SET is_available = ? WHERE id = ?').run(newVal, id);
+    await pool.query('UPDATE vendors SET is_available = ? WHERE id = ?', [newVal, id]);
     return Vendor.findById(id);
   },
 
-  updateStats: (id, { completed_jobs, cancelled_jobs, rating }) => {
-    const v = Vendor.findByIdRaw(id);
+  updateStats: async (id, { completed_jobs, cancelled_jobs, rating }) => {
+    const v = await Vendor.findByIdRaw(id);
     if (!v) return null;
     const newCompleted = (v.completed_jobs || 0) + (completed_jobs || 0);
     const newCancelled = (v.cancelled_jobs || 0) + (cancelled_jobs || 0);
     const newTotalJobs = newCompleted + newCancelled;
     const newRating    = rating !== undefined ? rating : v.rating;
-    db.prepare(`UPDATE vendors SET completed_jobs=?, cancelled_jobs=?, total_jobs=?, rating=? WHERE id=?`)
-      .run(newCompleted, newCancelled, newTotalJobs, newRating, id);
+    await pool.query(
+      `UPDATE vendors SET completed_jobs=?, cancelled_jobs=?, total_jobs=?, rating=? WHERE id=?`,
+      [newCompleted, newCancelled, newTotalJobs, newRating, id]
+    );
     return Vendor.findById(id);
   },
 
-  delete: (id) => db.prepare('DELETE FROM vendors WHERE id = ?').run(id),
+  delete: async (id) => {
+    const [result] = await pool.query('DELETE FROM vendors WHERE id = ?', [id]);
+    return result;
+  },
 
   // ── Vendor Services (many-to-many) ──────────────────────────────────────────
 
-  addService: (vendor_id, service_id) => {
+  addService: async (vendor_id, service_id) => {
     try {
-      db.prepare('INSERT INTO vendor_services (vendor_id, service_id) VALUES (?, ?)').run(vendor_id, service_id);
+      await pool.query(
+        'INSERT INTO vendor_services (vendor_id, service_id) VALUES (?, ?)',
+        [vendor_id, service_id]
+      );
       return { success: true };
-    } catch { return { success: false, message: 'Service already assigned' }; }
+    } catch {
+      return { success: false, message: 'Service already assigned' };
+    }
   },
 
-  
-
-  removeService: (vendor_id, service_id) => {
-    db.prepare('DELETE FROM vendor_services WHERE vendor_id = ? AND service_id = ?').run(vendor_id, service_id);
+  removeService: async (vendor_id, service_id) => {
+    await pool.query(
+      'DELETE FROM vendor_services WHERE vendor_id = ? AND service_id = ?',
+      [vendor_id, service_id]
+    );
   },
 
-  getServices: (vendor_id) => {
-    return db.prepare(`
+  getServices: async (vendor_id) => {
+    const [rows] = await pool.query(`
       SELECT s.id, s.name, s.code, c.name as category_name
       FROM vendor_services vs
       JOIN services s ON vs.service_id = s.id
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE vs.vendor_id = ?
-    `).all(vendor_id);
+    `, [vendor_id]);
+    return rows;
   },
 
   // Vendor Category Map (many-to-many)
-setVendorCategories: (vendor_id, category_ids = []) => {
-  db.prepare('DELETE FROM vendor_category_map WHERE vendor_id = ?').run(vendor_id);
-  const insert = db.prepare('INSERT OR IGNORE INTO vendor_category_map (vendor_id, vendor_category_id) VALUES (?, ?)');
-  for (const cid of category_ids) insert.run(vendor_id, cid);
-},
+  setVendorCategories: async (vendor_id, category_ids = []) => {
+    await pool.query('DELETE FROM vendor_category_map WHERE vendor_id = ?', [vendor_id]);
+    for (const cid of category_ids) {
+      await pool.query(
+        'INSERT IGNORE INTO vendor_category_map (vendor_id, vendor_category_id) VALUES (?, ?)',
+        [vendor_id, cid]
+      );
+    }
+  },
 
-getVendorCategories: (vendor_id) => {
-  return db.prepare(`
-    SELECT vc.id, vc.name, vc.slug
-    FROM vendor_category_map vcm
-    JOIN vendor_categories vc ON vcm.vendor_category_id = vc.id
-    WHERE vcm.vendor_id = ?
-  `).all(vendor_id);
-},
+  getVendorCategories: async (vendor_id) => {
+    const [rows] = await pool.query(`
+      SELECT vc.id, vc.name, vc.slug
+      FROM vendor_category_map vcm
+      JOIN vendor_categories vc ON vcm.vendor_category_id = vc.id
+      WHERE vcm.vendor_id = ?
+    `, [vendor_id]);
+    return rows;
+  },
 
   // ── Attendance ───────────────────────────────────────────────────────────────
 
-  markAttendance: (vendor_id, date, status, note) => {
-    db.prepare(`
-      INSERT INTO vendor_attendance (vendor_id, date, status, note)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(vendor_id, date) DO UPDATE SET status=excluded.status, note=excluded.note
-    `).run(vendor_id, date, status ?? 'present', note ?? null);
-    return db.prepare('SELECT * FROM vendor_attendance WHERE vendor_id = ? AND date = ?').get(vendor_id, date);
+  markAttendance: async (vendor_id, date, status, note) => {
+    await pool.query(
+      `INSERT INTO vendor_attendance (vendor_id, date, status, note)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note)`,
+      [vendor_id, date, status ?? 'present', note ?? null]
+    );
+    const [rows] = await pool.query(
+      'SELECT * FROM vendor_attendance WHERE vendor_id = ? AND date = ?',
+      [vendor_id, date]
+    );
+    return rows[0];
   },
 
-  getAttendance: (vendor_id, month) => {
+  getAttendance: async (vendor_id, month) => {
     let q = 'SELECT * FROM vendor_attendance WHERE vendor_id = ?';
     const params = [vendor_id];
     if (month) { q += ' AND date LIKE ?'; params.push(`${month}%`); }
-    return db.prepare(q).all(...params);
+    const [rows] = await pool.query(q, params);
+    return rows;
   },
 };
 

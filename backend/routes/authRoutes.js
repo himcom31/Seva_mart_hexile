@@ -15,7 +15,7 @@ router.post('/register-admin', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-        const user = User.create({
+        const user = await User.create({
             ...req.body,
             password: hashedPassword,
             role: 'admin'

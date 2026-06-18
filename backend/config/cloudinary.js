@@ -7,6 +7,3 @@ cloudinary.config({
 });
 
 module.exports = cloudinary;
-
-
-///////////////// sgcusdugj

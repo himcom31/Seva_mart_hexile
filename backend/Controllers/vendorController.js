@@ -16,7 +16,7 @@ const generateToken = (id) =>
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // POST /api/vendors/register
-exports.registerVendor = (req, res) => {
+exports.registerVendor = async (req, res) => {
   try {
     const {
       name, mobile, aadhaar, email, password, confirm_password,
@@ -40,11 +40,11 @@ exports.registerVendor = (req, res) => {
       return res.status(400).json({ success: false, message: 'Passwords do not match' });
 
     // ── Duplicate checks ───────────────────────────────────────────────────
-    if (Vendor.findByMobileRaw(mobile))
+    if (await Vendor.findByMobileRaw(mobile))
       return res.status(409).json({ success: false, message: 'Mobile already registered' });
-    if (Vendor.findByAadhaar(aadhaar))
+    if (await Vendor.findByAadhaar(aadhaar))
       return res.status(409).json({ success: false, message: 'Aadhaar already registered' });
-    if (email && Vendor.findByEmailRaw(email))
+    if (email && await Vendor.findByEmailRaw(email))
       return res.status(409).json({ success: false, message: 'Email already registered' });
 
     // ── File uploads ───────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ exports.registerVendor = (req, res) => {
     const certificate   = req.files?.certificate?.[0]?.filename   || null;
 
     // ── Create vendor (model hashes password) ──────────────────────────────
-    const vendor = Vendor.create({
+    const vendor = await Vendor.create({
       name, mobile, aadhaar, email, password,
       experience, category_id, subcategory_id,
       city, address, profile_photo, aadhaar_front,
@@ -62,19 +62,19 @@ exports.registerVendor = (req, res) => {
     });
 
     let categoryIds = [];
-try {
-  // Frontend sends both vendor_category_ids[] (repeated) and vendor_category_ids (JSON)
-  const raw = req.body['vendor_category_ids[]'] || req.body.vendor_category_ids;
-  if (Array.isArray(raw)) categoryIds = raw.map(Number).filter(Boolean);
-  else if (typeof raw === 'string') {
-    categoryIds = (raw.startsWith('[') ? JSON.parse(raw) : [raw])
-      .map(Number).filter(Boolean);
-  }
-} catch { categoryIds = []; }
+    try {
+      // Frontend sends both vendor_category_ids[] (repeated) and vendor_category_ids (JSON)
+      const raw = req.body['vendor_category_ids[]'] || req.body.vendor_category_ids;
+      if (Array.isArray(raw)) categoryIds = raw.map(Number).filter(Boolean);
+      else if (typeof raw === 'string') {
+        categoryIds = (raw.startsWith('[') ? JSON.parse(raw) : [raw])
+          .map(Number).filter(Boolean);
+      }
+    } catch { categoryIds = []; }
 
-if (categoryIds.length > 0) {
-  Vendor.setVendorCategories(vendor.id, categoryIds);
-}
+    if (categoryIds.length > 0) {
+      await Vendor.setVendorCategories(vendor.id, categoryIds);
+    }
 
     const token = generateToken(vendor.id);
 
@@ -92,25 +92,25 @@ if (categoryIds.length > 0) {
 
 
 // POST /api/vendors/login
-exports.loginVendor = (req, res) => {
+exports.loginVendor = async (req, res) => {
   try {
     const { mobile, email, password } = req.body;
- 
+
     if (!password)
       return res.status(400).json({ success: false, message: 'Password is required' });
     if (!mobile && !email)
       return res.status(400).json({ success: false, message: 'Mobile or email is required' });
- 
+
     // ── Mobile number normalizer ───────────────────────────────────────────
     // Tries multiple formats so login works regardless of how the frontend
     // sends the number, and regardless of how it was stored at registration.
     let vendorRaw = null;
- 
+
     if (mobile) {
       const digits = mobile.replace(/\D/g, ""); // strip everything except digits
       // e.g. "+917563883929" → "917563883929" (12 digits)
       // e.g. "7563883929"    → "7563883929"   (10 digits)
- 
+
       const attempts = [
         mobile,                    // exactly as sent:          +917563883929
         `+${digits}`,              // re-prefixed with +:        +917563883929
@@ -118,44 +118,44 @@ exports.loginVendor = (req, res) => {
         digits.slice(-10),         // plain 10 digits:           7563883929
         `91${digits.slice(-10)}`,  // with country code no +:    917563883929
       ];
- 
+
       console.log("Mobile login attempts:", attempts);
- 
+
       for (const attempt of attempts) {
-        vendorRaw = Vendor.findByMobileRaw(attempt);
+        vendorRaw = await Vendor.findByMobileRaw(attempt);
         if (vendorRaw) {
           console.log("Mobile matched with format:", attempt);
           break;
         }
       }
     } else {
-      vendorRaw = Vendor.findByEmailRaw(email);
+      vendorRaw = await Vendor.findByEmailRaw(email);
     }
- 
+
     // ── Not found ──────────────────────────────────────────────────────────
     if (!vendorRaw)
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
- 
+
     // ── No password set ────────────────────────────────────────────────────
     if (!vendorRaw.password)
       return res.status(401).json({
         success: false,
         message: 'No password set for this account. Contact support.',
       });
- 
+
     // ── Wrong password ─────────────────────────────────────────────────────
     if (!Vendor.checkPassword(password, vendorRaw.password))
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
- 
+
     // ── Account status gate ────────────────────────────────────────────────
     if (vendorRaw.status === 'suspended')
       return res.status(403).json({ success: false, message: 'Your account has been suspended. Contact support.' });
     if (vendorRaw.status === 'inactive')
       return res.status(403).json({ success: false, message: 'Your account is inactive. Contact support.' });
- 
+
     const token  = generateToken(vendorRaw.id);
     const vendor = Vendor._safe(vendorRaw);
- 
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -170,14 +170,14 @@ exports.loginVendor = (req, res) => {
 
 
 // GET /api/vendors/me  (vendor must be logged in)
-exports.getMe = (req, res) => {
+exports.getMe = async (req, res) => {
   try {
-    const vendor   = Vendor.findById(req.vendor.id);
+    const vendor   = await Vendor.findById(req.vendor.id);
     if (!vendor)
       return res.status(404).json({ success: false, message: 'Vendor not found' });
 
-    const services   = Vendor.getServices(req.vendor.id);
-    const attendance = Vendor.getAttendance(req.vendor.id);
+    const services   = await Vendor.getServices(req.vendor.id);
+    const attendance = await Vendor.getAttendance(req.vendor.id);
 
     res.status(200).json({ success: true, vendor, services, attendance });
   } catch (err) {
@@ -187,7 +187,7 @@ exports.getMe = (req, res) => {
 
 
 // PATCH /api/vendors/me/password  (vendor must be logged in)
-exports.changePassword = (req, res) => {
+exports.changePassword = async (req, res) => {
   try {
     const { current_password, new_password, confirm_new_password } = req.body;
 
@@ -203,14 +203,14 @@ exports.changePassword = (req, res) => {
     if (confirm_new_password && new_password !== confirm_new_password)
       return res.status(400).json({ success: false, message: 'Passwords do not match' });
 
-    const vendorRaw = Vendor.findByIdRaw(req.vendor.id);
+    const vendorRaw = await Vendor.findByIdRaw(req.vendor.id);
     if (!vendorRaw)
       return res.status(404).json({ success: false, message: 'Vendor not found' });
 
     if (!Vendor.checkPassword(current_password, vendorRaw.password))
       return res.status(401).json({ success: false, message: 'Current password is incorrect' });
 
-    Vendor.updatePassword(req.vendor.id, new_password);
+    await Vendor.updatePassword(req.vendor.id, new_password);
 
     res.status(200).json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
@@ -229,36 +229,36 @@ exports.logoutVendor = (_req, res) => {
 //  ADMIN routes  (unchanged logic — kept here for single-file convenience)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-exports.getAllVendors = (req, res) => {
+exports.getAllVendors = async (req, res) => {
   try {
     const { status, city, category_id, verify_status } = req.query;
-    const vendors = Vendor.findAll({ status, city, category_id, verify_status });
-    const enriched = vendors.map(v => ({
+    const vendors = await Vendor.findAll({ status, city, category_id, verify_status });
+    const enriched = await Promise.all(vendors.map(async v => ({
       ...v,
-      vendorCategories: Vendor.getVendorCategories(v.id),
-    }));
+      vendorCategories: await Vendor.getVendorCategories(v.id),
+    })));
     res.status(200).json({ success: true, count: enriched.length, vendors: enriched });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.getVendorById = (req, res) => {
+exports.getVendorById = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const services        = Vendor.getServices(req.params.id);
-    const attendance      = Vendor.getAttendance(req.params.id);
-    const vendorCategories = Vendor.getVendorCategories(req.params.id);   // ← add
+    const services         = await Vendor.getServices(req.params.id);
+    const attendance       = await Vendor.getAttendance(req.params.id);
+    const vendorCategories = await Vendor.getVendorCategories(req.params.id);   // ← add
     res.status(200).json({ success: true, vendor: { ...vendor, vendorCategories }, services, attendance });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.updateVendor = (req, res) => {
+exports.updateVendor = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
 
     const { name, email, experience, category_id, subcategory_id,
@@ -275,7 +275,7 @@ exports.updateVendor = (req, res) => {
       return vendor[field];
     };
 
-    const updated = Vendor.update(req.params.id, {
+    const updated = await Vendor.update(req.params.id, {
       name:           name           || vendor.name,
       email:          email          ?? vendor.email,
       experience:     experience     ?? vendor.experience,
@@ -297,41 +297,41 @@ exports.updateVendor = (req, res) => {
   }
 };
 
-exports.updateStatus = (req, res) => {
+exports.updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const allowed = ['active', 'inactive', 'suspended', 'pending'];
     if (!allowed.includes(status))
       return res.status(400).json({ message: `status must be one of: ${allowed.join(', ')}` });
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const updated = Vendor.updateStatus(req.params.id, status);
+    const updated = await Vendor.updateStatus(req.params.id, status);
     res.status(200).json({ success: true, message: `Vendor status set to ${status}`, vendor: updated });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.updateVerifyStatus = (req, res) => {
+exports.updateVerifyStatus = async (req, res) => {
   try {
     const { verify_status } = req.body;
     const allowed = ['pending', 'verified', 'rejected'];
     if (!allowed.includes(verify_status))
       return res.status(400).json({ message: `verify_status must be: ${allowed.join(', ')}` });
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const updated = Vendor.updateVerifyStatus(req.params.id, verify_status);
+    const updated = await Vendor.updateVerifyStatus(req.params.id, verify_status);
     res.status(200).json({ success: true, message: `Verify status: ${verify_status}`, vendor: updated });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.toggleAvailability = (req, res) => {
+exports.toggleAvailability = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const updated = Vendor.toggleAvailability(req.params.id);
+    const updated = await Vendor.toggleAvailability(req.params.id);
     res.status(200).json({
       success: true,
       message: `Vendor is now ${updated.is_available ? 'available' : 'unavailable'}`,
@@ -342,71 +342,71 @@ exports.toggleAvailability = (req, res) => {
   }
 };
 
-exports.addVendorService = (req, res) => {
+exports.addVendorService = async (req, res) => {
   try {
     const { service_id } = req.body;
     if (!service_id) return res.status(400).json({ message: 'service_id required' });
-    const result = Vendor.addService(req.params.id, service_id);
+    const result = await Vendor.addService(req.params.id, service_id);
     if (!result.success) return res.status(409).json({ message: result.message });
-    const services = Vendor.getServices(req.params.id);
+    const services = await Vendor.getServices(req.params.id);
     res.status(200).json({ success: true, message: 'Service assigned', services });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.removeVendorService = (req, res) => {
+exports.removeVendorService = async (req, res) => {
   try {
-    Vendor.removeService(req.params.id, req.params.service_id);
-    const services = Vendor.getServices(req.params.id);
+    await Vendor.removeService(req.params.id, req.params.service_id);
+    const services = await Vendor.getServices(req.params.id);
     res.status(200).json({ success: true, message: 'Service removed', services });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.getVendorServices = (req, res) => {
+exports.getVendorServices = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const services = Vendor.getServices(req.params.id);
+    const services = await Vendor.getServices(req.params.id);
     res.status(200).json({ success: true, services });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.markAttendance = (req, res) => {
+exports.markAttendance = async (req, res) => {
   try {
     const { date, status, note } = req.body;
     if (!date) return res.status(400).json({ message: 'date is required (YYYY-MM-DD)' });
     const allowed = ['present', 'absent', 'leave', 'holiday'];
     if (status && !allowed.includes(status))
       return res.status(400).json({ message: `status must be: ${allowed.join(', ')}` });
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
-    const record = Vendor.markAttendance(req.params.id, date, status, note);
+    const record = await Vendor.markAttendance(req.params.id, date, status, note);
     res.status(200).json({ success: true, message: 'Attendance marked', attendance: record });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.getAttendance = (req, res) => {
+exports.getAttendance = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
     const { month } = req.query;
-    const attendance = Vendor.getAttendance(req.params.id, month);
+    const attendance = await Vendor.getAttendance(req.params.id, month);
     res.status(200).json({ success: true, count: attendance.length, attendance });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 };
 
-exports.getPerformance = (req, res) => {
+exports.getPerformance = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
     res.status(200).json({
       success: true,
@@ -428,9 +428,9 @@ exports.getPerformance = (req, res) => {
   }
 };
 
-exports.deleteVendor = (req, res) => {
+exports.deleteVendor = async (req, res) => {
   try {
-    const vendor = Vendor.findById(req.params.id);
+    const vendor = await Vendor.findById(req.params.id);
     if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
     ['profile_photo', 'aadhaar_front', 'aadhaar_back', 'certificate'].forEach(field => {
       if (vendor[field]) {
@@ -438,7 +438,7 @@ exports.deleteVendor = (req, res) => {
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     });
-    Vendor.delete(req.params.id);
+    await Vendor.delete(req.params.id);
     res.status(200).json({ success: true, message: 'Vendor deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });

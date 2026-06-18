@@ -1,103 +1,98 @@
-const db = require('../../config/db');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS services (
-    id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-    name          TEXT     NOT NULL,
-    category_id   INTEGER  NOT NULL,
-    code          TEXT     NOT NULL UNIQUE,
-    slug          TEXT     NOT NULL UNIQUE,
-    image         TEXT,
-    icon          TEXT,
-    description   TEXT,
-    status        TEXT     NOT NULL DEFAULT 'active',
-    verify_status TEXT     NOT NULL DEFAULT 'pending',
-    featured      INTEGER  NOT NULL DEFAULT 0,
-    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-  );
-`);
+const pool = require('../../config/db');
 
 const Service = {
 
-  create: ({ name, category_id, code, slug, image, icon, description, status, verify_status, featured }) => {
-    const stmt = db.prepare(`
-      INSERT INTO services
+  create: async ({ name, category_id, code, slug, image, icon, description, status, verify_status, featured }) => {
+    const [result] = await pool.query(
+      `INSERT INTO services
         (name, category_id, code, slug, image, icon, description, status, verify_status, featured)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(
-      name, category_id, code, slug,
-      image         ?? null,
-      icon          ?? null,
-      description   ?? null,
-      status        ?? 'active',
-      verify_status ?? 'pending',
-      featured ? 1 : 0
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name, category_id, code, slug,
+        image         ?? null,
+        icon          ?? null,
+        description   ?? null,
+        status        ?? 'active',
+        verify_status ?? 'pending',
+        featured ? 1 : 0
+      ]
     );
-    return Service.findById(result.lastInsertRowid);
+    return Service.findById(result.insertId);
   },
 
-  findById: (id) =>
-    db.prepare(`
+  findById: async (id) => {
+    const [rows] = await pool.query(`
       SELECT s.*, c.name AS category_name
       FROM   services s
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE  s.id = ?
-    `).get(id) || null,
+    `, [id]);
+    return rows[0] || null;
+  },
 
-  findByCode: (code) =>
-    db.prepare('SELECT * FROM services WHERE code = ?').get(code) || null,
+  findByCode: async (code) => {
+    const [rows] = await pool.query('SELECT * FROM services WHERE code = ?', [code]);
+    return rows[0] || null;
+  },
 
-  findBySlug: (slug) =>
-    db.prepare('SELECT * FROM services WHERE slug = ?').get(slug) || null,
+  findBySlug: async (slug) => {
+    const [rows] = await pool.query('SELECT * FROM services WHERE slug = ?', [slug]);
+    return rows[0] || null;
+  },
 
-  findAll: () =>
-    db.prepare(`
+  findAll: async () => {
+    const [rows] = await pool.query(`
       SELECT s.*, c.name AS category_name
       FROM   services s
       LEFT JOIN categories c ON s.category_id = c.id
       ORDER  BY s.created_at DESC
-    `).all(),
+    `);
+    return rows;
+  },
 
-  findByCategoryId: (category_id) =>
-    db.prepare(`
+  findByCategoryId: async (category_id) => {
+    const [rows] = await pool.query(`
       SELECT s.*, c.name AS category_name
       FROM   services s
       LEFT JOIN categories c ON s.category_id = c.id
       WHERE  s.category_id = ?
       ORDER  BY s.created_at DESC
-    `).all(category_id),
+    `, [category_id]);
+    return rows;
+  },
 
   // Auto-generate code like PROD001, ELP002
-  generateCode: (prefix = 'PROD') => {
-    const last = db.prepare(
-      `SELECT code FROM services WHERE code LIKE ? ORDER BY id DESC LIMIT 1`
-    ).get(`${prefix}%`);
+  generateCode: async (prefix = 'PROD') => {
+    const [rows] = await pool.query(
+      `SELECT code FROM services WHERE code LIKE ? ORDER BY id DESC LIMIT 1`,
+      [`${prefix}%`]
+    );
+    const last = rows[0];
     if (!last) return `${prefix}001`;
     const num = parseInt(last.code.replace(prefix, ''), 10) + 1;
     return `${prefix}${String(num).padStart(3, '0')}`;
   },
 
-  update: (id, fields) => {
+  update: async (id, fields) => {
     const setClause = Object.keys(fields).map(k => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE services SET ${setClause} WHERE id = ?`)
-      .run(...Object.values(fields), id);
+    await pool.query(`UPDATE services SET ${setClause} WHERE id = ?`, [...Object.values(fields), id]);
     return Service.findById(id);
   },
 
-  updateStatus: (id, status) => {
-    db.prepare('UPDATE services SET status = ? WHERE id = ?').run(status, id);
+  updateStatus: async (id, status) => {
+    await pool.query('UPDATE services SET status = ? WHERE id = ?', [status, id]);
     return Service.findById(id);
   },
 
-  updateVerifyStatus: (id, verify_status) => {
-    db.prepare('UPDATE services SET verify_status = ? WHERE id = ?').run(verify_status, id);
+  updateVerifyStatus: async (id, verify_status) => {
+    await pool.query('UPDATE services SET verify_status = ? WHERE id = ?', [verify_status, id]);
     return Service.findById(id);
   },
 
-  delete: (id) =>
-    db.prepare('DELETE FROM services WHERE id = ?').run(id),
+  delete: async (id) => {
+    const [result] = await pool.query('DELETE FROM services WHERE id = ?', [id]);
+    return result;
+  },
 };
 
 module.exports = Service;

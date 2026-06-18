@@ -1,52 +1,45 @@
-const db = require('../../config/db');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    language TEXT NOT NULL DEFAULT 'en',
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
-    image TEXT,
-    icon TEXT,
-    description TEXT,
-    status TEXT NOT NULL DEFAULT 'active',
-    featured INTEGER NOT NULL DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+const pool = require('../../config/db');
 
 const Category = {
-  create: ({ language, name, slug, image, icon, description, status, featured }) => {
-    const stmt = db.prepare(`
-      INSERT INTO categories (language, name, slug, image, icon, description, status, featured)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(language, name, slug, image ?? null, icon ?? null, description ?? null, status ?? 'active', featured ? 1 : 0);
-    return Category.findById(result.lastInsertRowid);
+  create: async ({ language, name, slug, image, icon, description, status, featured }) => {
+    const [result] = await pool.query(
+      `INSERT INTO categories (language, name, slug, image, icon, description, status, featured)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        language, name, slug,
+        image ?? null, icon ?? null, description ?? null,
+        status ?? 'active', featured ? 1 : 0
+      ]
+    );
+    return Category.findById(result.insertId);
   },
 
-  findById: (id) => {
-    return db.prepare('SELECT * FROM categories WHERE id = ?').get(id) || null;
+  findById: async (id) => {
+    const [rows] = await pool.query('SELECT * FROM categories WHERE id = ?', [id]);
+    return rows[0] || null;
   },
 
-  findBySlug: (slug) => {
-    return db.prepare('SELECT * FROM categories WHERE slug = ?').get(slug) || null;
+  findBySlug: async (slug) => {
+    const [rows] = await pool.query('SELECT * FROM categories WHERE slug = ?', [slug]);
+    return rows[0] || null;
   },
 
-  findAll: () => {
-    return db.prepare('SELECT * FROM categories ORDER BY created_at DESC').all();
+  findAll: async () => {
+    const [rows] = await pool.query('SELECT * FROM categories ORDER BY created_at DESC');
+    return rows;
   },
 
-  update: (id, fields) => {
+  update: async (id, fields) => {
     const keys = Object.keys(fields);
     const setClause = keys.map(k => `${k} = ?`).join(', ');
     const values = Object.values(fields);
-    db.prepare(`UPDATE categories SET ${setClause} WHERE id = ?`).run(...values, id);
+    await pool.query(`UPDATE categories SET ${setClause} WHERE id = ?`, [...values, id]);
     return Category.findById(id);
   },
 
-  delete: (id) => {
-    return db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  delete: async (id) => {
+    const [result] = await pool.query('DELETE FROM categories WHERE id = ?', [id]);
+    return result;
   }
 };
 

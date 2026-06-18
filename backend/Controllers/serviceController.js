@@ -18,7 +18,7 @@ const getPublicId = (url) => {
 
 // ─── Add Service ────────────────────────────────────────────────────────────
 // POST /api/services  (Admin)
-exports.addService = (req, res) => {
+exports.addService = async (req, res) => {
   try {
     const {
       name, category_id, code, slug,
@@ -29,23 +29,23 @@ exports.addService = (req, res) => {
     if (!name)        return res.status(400).json({ message: 'Service name is required' });
     if (!category_id) return res.status(400).json({ message: 'category_id is required' });
 
-    const parentCategory = Category.findById(category_id);
+    const parentCategory = await Category.findById(category_id);
     if (!parentCategory)
       return res.status(404).json({ message: `Category with id ${category_id} not found` });
 
-    const finalCode = code || Service.generateCode(code_prefix || 'PROD');
+    const finalCode = code || await Service.generateCode(code_prefix || 'PROD');
     const finalSlug = slug || generateSlug(name);
 
-    if (Service.findByCode(finalCode))
+    if (await Service.findByCode(finalCode))
       return res.status(409).json({ message: `Code "${finalCode}" already exists.` });
-    if (Service.findBySlug(finalSlug))
+    if (await Service.findBySlug(finalSlug))
       return res.status(409).json({ message: `Slug "${finalSlug}" already exists.` });
 
     // Cloudinary storage returns the hosted URL in file.path
     const image = req.files?.image?.[0]?.path || null;
     const icon  = req.files?.icon?.[0]?.path  || null;
 
-    const service = Service.create({
+    const service = await Service.create({
       name,
       category_id,
       code:          finalCode,
@@ -67,9 +67,9 @@ exports.addService = (req, res) => {
 
 // ─── Get All Services ────────────────────────────────────────────────────────
 // GET /api/services  (Public)
-exports.getAllServices = (req, res) => {
+exports.getAllServices = async (req, res) => {
   try {
-    const services = Service.findAll();
+    const services = await Service.findAll();
     res.status(200).json({ success: true, count: services.length, services });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -78,13 +78,13 @@ exports.getAllServices = (req, res) => {
 
 // ─── Get Services by Category ────────────────────────────────────────────────
 // GET /api/services/by-category/:category_id  (Public)
-exports.getServicesByCategory = (req, res) => {
+exports.getServicesByCategory = async (req, res) => {
   try {
-    const parentCategory = Category.findById(req.params.category_id);
+    const parentCategory = await Category.findById(req.params.category_id);
     if (!parentCategory)
       return res.status(404).json({ message: 'Category not found' });
 
-    const services = Service.findByCategoryId(req.params.category_id);
+    const services = await Service.findByCategoryId(req.params.category_id);
     res.status(200).json({
       success:  true,
       category: parentCategory.name,
@@ -98,9 +98,9 @@ exports.getServicesByCategory = (req, res) => {
 
 // ─── Get Single Service ──────────────────────────────────────────────────────
 // GET /api/services/:id  (Public)
-exports.getServiceById = (req, res) => {
+exports.getServiceById = async (req, res) => {
   try {
-    const service = Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
     res.status(200).json({ success: true, service });
   } catch (err) {
@@ -112,7 +112,7 @@ exports.getServiceById = (req, res) => {
 // PUT /api/services/:id  (Admin)
 exports.updateService = async (req, res) => {
   try {
-    const service = Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
     const {
@@ -121,7 +121,7 @@ exports.updateService = async (req, res) => {
     } = req.body;
 
     if (category_id && category_id != service.category_id) {
-      const parentCategory = Category.findById(category_id);
+      const parentCategory = await Category.findById(category_id);
       if (!parentCategory)
         return res.status(404).json({ message: `Category with id ${category_id} not found` });
     }
@@ -143,7 +143,7 @@ exports.updateService = async (req, res) => {
       icon = req.files.icon[0].path;
     }
 
-    const updated = Service.update(req.params.id, {
+    const updated = await Service.update(req.params.id, {
       name:          name          || service.name,
       category_id:   category_id   || service.category_id,
       code:          code          || service.code,
@@ -167,13 +167,13 @@ exports.updateService = async (req, res) => {
 
 // ─── Toggle Status ───────────────────────────────────────────────────────────
 // PATCH /api/services/:id/toggle-status  (Admin)
-exports.toggleStatus = (req, res) => {
+exports.toggleStatus = async (req, res) => {
   try {
-    const service = Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
     const newStatus = service.status === 'active' ? 'inactive' : 'active';
-    const updated   = Service.updateStatus(req.params.id, newStatus);
+    const updated   = await Service.updateStatus(req.params.id, newStatus);
 
     res.status(200).json({ success: true, message: `Status changed to ${newStatus}`, service: updated });
   } catch (err) {
@@ -183,16 +183,16 @@ exports.toggleStatus = (req, res) => {
 
 // ─── Update Verify Status ────────────────────────────────────────────────────
 // PATCH /api/services/:id/verify  (Admin)
-exports.updateVerifyStatus = (req, res) => {
+exports.updateVerifyStatus = async (req, res) => {
   try {
     const { verify_status } = req.body;
     if (!['pending', 'verified', 'rejected'].includes(verify_status))
       return res.status(400).json({ message: 'verify_status must be: pending, verified, or rejected' });
 
-    const service = Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
-    const updated = Service.updateVerifyStatus(req.params.id, verify_status);
+    const updated = await Service.updateVerifyStatus(req.params.id, verify_status);
     res.status(200).json({
       success: true,
       message: `Verify status changed to ${verify_status}`,
@@ -207,7 +207,7 @@ exports.updateVerifyStatus = (req, res) => {
 // DELETE /api/services/:id  (Admin)
 exports.deleteService = async (req, res) => {
   try {
-    const service = Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id);
     if (!service) return res.status(404).json({ message: 'Service not found' });
 
     // Delete image + icon from Cloudinary before removing DB record
@@ -216,7 +216,7 @@ exports.deleteService = async (req, res) => {
       if (publicId) await cloudinary.uploader.destroy(publicId);
     }
 
-    Service.delete(req.params.id);
+    await Service.delete(req.params.id);
     res.status(200).json({ success: true, message: 'Service deleted successfully' });
   } catch (err) {
     console.error('deleteService error:', err.message);

@@ -36,4 +36,3 @@ router.delete('/:id', protect, isAdmin,   upload.fields([
 ]),      deleteSubService);
 
 module.exports = router;
-

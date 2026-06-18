@@ -16,19 +16,19 @@ const getPublicId = (url) => {
 // @desc   Add SubService
 // @route  POST /api/subservices
 // @access Private (Admin)
-exports.addSubService = (req, res) => {
+exports.addSubService = async (req, res) => {
   try {
     const { service_id, name, slug, description, price, status, featured } = req.body;
 
     if (!service_id) return res.status(400).json({ message: 'service_id is required' });
     if (!name)       return res.status(400).json({ message: 'Sub service name is required' });
 
-    const parentService = Service.findById(service_id);
+    const parentService = await Service.findById(service_id);
     if (!parentService)
       return res.status(404).json({ message: `Service with id ${service_id} not found` });
 
     const finalSlug = slug || generateSlug(name);
-    const existing  = SubService.findBySlug(finalSlug);
+    const existing  = await SubService.findBySlug(finalSlug);
     if (existing)
       return res.status(409).json({ message: `Slug "${finalSlug}" already exists.` });
 
@@ -36,7 +36,7 @@ exports.addSubService = (req, res) => {
     const image = req.files?.image?.[0]?.path || null;
     const icon  = req.files?.icon?.[0]?.path  || null;
 
-    const subService = SubService.create({
+    const subService = await SubService.create({
       service_id, name,
       slug:        finalSlug,
       image,       icon,
@@ -56,9 +56,9 @@ exports.addSubService = (req, res) => {
 // @desc   Get All SubServices
 // @route  GET /api/subservices
 // @access Public
-exports.getAllSubServices = (req, res) => {
+exports.getAllSubServices = async (req, res) => {
   try {
-    const subServices = SubService.findAll();
+    const subServices = await SubService.findAll();
     res.status(200).json({ success: true, count: subServices.length, subServices });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -68,14 +68,14 @@ exports.getAllSubServices = (req, res) => {
 // @desc   Get SubServices by Service ID
 // @route  GET /api/subservices/by-service/:service_id
 // @access Public
-exports.getSubServicesByService = (req, res) => {
+exports.getSubServicesByService = async (req, res) => {
   try {
     const { service_id } = req.params;
-    const parentService  = Service.findById(service_id);
+    const parentService  = await Service.findById(service_id);
     if (!parentService)
       return res.status(404).json({ message: 'Parent service not found' });
 
-    const subServices = SubService.findByServiceId(service_id);
+    const subServices = await SubService.findByServiceId(service_id);
     res.status(200).json({ success: true, service: parentService.name, count: subServices.length, subServices });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -85,9 +85,9 @@ exports.getSubServicesByService = (req, res) => {
 // @desc   Get Single SubService
 // @route  GET /api/subservices/:id
 // @access Public
-exports.getSubServiceById = (req, res) => {
+exports.getSubServiceById = async (req, res) => {
   try {
-    const subService = SubService.findById(req.params.id);
+    const subService = await SubService.findById(req.params.id);
     if (!subService) return res.status(404).json({ message: 'Sub Service not found' });
     res.status(200).json({ success: true, subService });
   } catch (err) {
@@ -100,13 +100,13 @@ exports.getSubServiceById = (req, res) => {
 // @access Private (Admin)
 exports.updateSubService = async (req, res) => {
   try {
-    const subService = SubService.findById(req.params.id);
+    const subService = await SubService.findById(req.params.id);
     if (!subService) return res.status(404).json({ message: 'Sub Service not found' });
 
     const { service_id, name, slug, description, price, status, featured } = req.body;
 
     if (service_id && service_id != subService.service_id) {
-      const parentService = Service.findById(service_id);
+      const parentService = await Service.findById(service_id);
       if (!parentService)
         return res.status(404).json({ message: `Service with id ${service_id} not found` });
     }
@@ -126,7 +126,7 @@ exports.updateSubService = async (req, res) => {
       icon = req.files.icon[0].path;
     }
 
-    const updated = SubService.update(req.params.id, {
+    const updated = await SubService.update(req.params.id, {
       service_id:  service_id  || subService.service_id,
       name:        name        || subService.name,
       slug:        slug        || subService.slug,
@@ -148,7 +148,7 @@ exports.updateSubService = async (req, res) => {
 // @access Private (Admin)
 exports.deleteSubService = async (req, res) => {
   try {
-    const subService = SubService.findById(req.params.id);
+    const subService = await SubService.findById(req.params.id);
     if (!subService) return res.status(404).json({ message: 'Sub Service not found' });
 
     for (const field of ['image', 'icon']) {
@@ -156,7 +156,7 @@ exports.deleteSubService = async (req, res) => {
       if (publicId) await cloudinary.uploader.destroy(publicId);
     }
 
-    SubService.delete(req.params.id);
+    await SubService.delete(req.params.id);
     res.status(200).json({ success: true, message: 'Sub Service deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });

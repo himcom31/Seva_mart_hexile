@@ -2,23 +2,16 @@
 import React, { useState, useEffect, useRef } from "react";
 const API_BASE1 = import.meta.env.VITE_API_URL;
 
-
 const API_BASE    = `${API_BASE1}/api`;
-const SERVER_BASE = API_BASE1
+const SERVER_BASE = API_BASE1;
 
 const FALLBACK_ICONS = [
   "🔧","🏠","🧹","🍽","🚗","⚡","💅","🌿","🎨","📦","🏊","🐾","💻","📸","🎓",
 ];
 
-/**
- * Build a full image URL from what the backend stores.
- * Backend saves only the filename (e.g. "1748123456-photo.png")
- * under  /uploads/categories/  on the server.
- * Full URL → http://localhost:5000/uploads/categories/1748123456-photo.png
- */
 const buildImageUrl = (url) => {
   if (!url || typeof url !== "string") return null;
-  return url; // Cloudinary URLs are stored directly now
+  return url; // Cloudinary URLs stored directly
 };
 
 /* ── Smart icon renderer ── */
@@ -126,6 +119,15 @@ const injectStyles = () => {
     }
     .btn-outline:hover { background: #e91e8c; color: #fff; }
 
+    .btn-outline-gray {
+      font-size: 0.82rem; font-weight: 600;
+      padding: 8px 16px; border-radius: 9px;
+      border: 1.5px solid #d1d5db; color: #374151;
+      background: transparent; text-decoration: none;
+      white-space: nowrap; transition: background 0.2s, color 0.2s, border-color 0.2s; cursor: pointer;
+    }
+    .btn-outline-gray:hover { border-color: #e91e8c; color: #e91e8c; background: #fdf2f8; }
+
     .btn-primary {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 18px; border-radius: 9px;
@@ -139,6 +141,25 @@ const injectStyles = () => {
       transform: translateY(-1px);
       box-shadow: 0 6px 20px rgba(233,30,140,0.42);
       opacity: 0.93;
+    }
+
+    /* Track order pill — distinctive teal-ish accent so it stands apart */
+    .btn-track {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 9px;
+      background: #fff; border: 1.5px solid #10b981;
+      color: #065f46; font-size: 0.82rem; font-weight: 700;
+      text-decoration: none; white-space: nowrap;
+      transition: background 0.2s, color 0.2s, transform 0.18s;
+    }
+    .btn-track:hover {
+      background: #10b981; color: #fff;
+      transform: translateY(-1px);
+    }
+    /* Show green dot if logged in */
+    .track-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #10b981; display: inline-block; flex-shrink: 0;
     }
 
     .hamburger-btn {
@@ -168,7 +189,20 @@ const Navbar = () => {
   const [categories,  setCategories]  = useState([]);
   const [catLoading,  setCatLoading]  = useState(false);
   const [catError,    setCatError]    = useState(false);
+
+  // Customer session state
+  const [customerMobile, setCustomerMobile] = useState(
+    () => localStorage.getItem("al_customer_mobile") || ""
+  );
+
   const catRef = useRef(null);
+
+  // Keep customer state in sync across tabs / pages
+  useEffect(() => {
+    const sync = () => setCustomerMobile(localStorage.getItem("al_customer_mobile") || "");
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
 
   /* ── Lazy-fetch categories ── */
   useEffect(() => {
@@ -197,17 +231,18 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  /* ── Build category URL with query param ── */
   const getCategoryUrl = (cat) => {
     const id = cat.id || cat._id;
     return `/user/services?category=${id}`;
   };
 
   const navItems = [
-    { label: "Home",     href: "/user/home",     active: true  },
+    { label: "Home",     href: "/",     active: true  },
     { label: "Service",  href: "/user/services", active: false },
     { label: "About Us", href: "/user/about",    active: false },
   ];
+
+  const isCustomerLoggedIn = Boolean(customerMobile);
 
   const GridIcon = () => (
     <span style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"2.5px", width:13, height:13, flexShrink:0 }}>
@@ -285,12 +320,12 @@ const Navbar = () => {
 
         {/* Logo */}
         <a href="/user/home" style={{ display:"flex", alignItems:"center", gap:8, textDecoration:"none", flexShrink:0 }}>
-  <img
-    src="/logo121.jpeg"
-    alt="Arus Lumina"
-    style={{ height: 60, width: "auto" }}
-  />
-</a>
+          <img
+            src="/logo121.jpeg"
+            alt="Arus Lumina"
+            style={{ height: 60, width: "auto" }}
+          />
+        </a>
 
         {/* Desktop Nav */}
         <ul className="desktop-nav" style={{ display:"flex", alignItems:"center", gap:28, listStyle:"none", margin:0, padding:0, flex:1 }}>
@@ -313,8 +348,20 @@ const Navbar = () => {
 
         {/* Desktop Right */}
         <div className="desktop-right" style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+          {/* ── Track Order / My Bookings button ── */}
+          {isCustomerLoggedIn ? (
+            <a href="/user/customer/dashboard" className="btn-track">
+              <span className="track-dot" />
+              My Bookings
+            </a>
+          ) : (
+            <a href="/user/customer/login" className="btn-track">
+              📋 Track Order
+            </a>
+          )}
+
           <a href="/user/VendorLogin"    className="btn-outline">🔐 Vendor Login</a>
-          <a href="/user/Vendorregister" className="btn-primary">👤 Vendor Registration</a>
+          {/* <a href="/user/Vendorregister" className="btn-primary">👤 Vendor Registration</a> */}
         </div>
 
         {/* Hamburger */}
@@ -350,6 +397,27 @@ const Navbar = () => {
               {item.label}
             </a>
           ))}
+
+          {/* Mobile: Track Order link */}
+          <a
+            href={isCustomerLoggedIn ? "/user/my-bookings" : "/user/track-order"}
+            onClick={() => setMenuOpen(false)}
+            style={{
+              display:"flex", alignItems:"center", gap:8,
+              padding:"11px 14px", borderRadius:10,
+              fontFamily:"'Plus Jakarta Sans',sans-serif",
+              fontSize:"0.9rem", fontWeight:600,
+              color:"#065f46", textDecoration:"none",
+              background:"#f0fdf4", transition:"background 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background="#dcfce7"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background="#f0fdf4"; }}
+          >
+            {isCustomerLoggedIn
+              ? <><span style={{ width:8, height:8, borderRadius:"50%", background:"#10b981", display:"inline-block" }} /> My Bookings</>
+              : <>📋 Track My Order</>
+            }
+          </a>
 
           {/* Mobile categories */}
           {categories.length > 0 && (

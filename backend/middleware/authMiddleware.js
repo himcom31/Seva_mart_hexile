@@ -9,11 +9,11 @@ const protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Role-based lookup (sync with SQLite)
+            // Role-based lookup (MySQL)
             if (decoded.role === 'admin') {
-                req.user = Admin.findById(decoded.id);
+                req.user = await Admin.findById(decoded.id);
             } else {
-                req.user = Admin.findById(decoded.id); // swap for another model if needed
+                req.user = await Admin.findById(decoded.id); // swap for another model if needed
             }
 
             if (!req.user) {
@@ -39,7 +39,5 @@ const isAdmin = (req, res, next) => {
         res.status(403).json({ message: 'Access denied: Admin only' });
     }
 };
-
-
 
 module.exports = { protect, isAdmin };

@@ -1,3 +1,4 @@
+
 const User = require('../models/superAdmin.js');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -7,7 +8,7 @@ exports.login = async (req, res) => {
 
     try {
         // Find user by email AND role
-        const user = User.findOne({ email, role });
+        const user = await User.findOne({ email, role });
 
         if (!user) {
             return res.status(404).json({
